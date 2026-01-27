@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logo Preparation Guide</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .checklist {
+      background: #f5f5f5;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+    }
+    .step {
+      background: white;
+      padding: 15px;
+      margin: 10px 0;
+      border-left: 4px solid #2563eb;
+      border-radius: 5px;
+    }
+    code {
+      background: #e5e5e5;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+    }
+    .command {
+      background: #1a1a1a;
+      color: #0f0;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 TradeTalk Logo Setup</h1>
+  
+  <div class="checklist">
+    <h2>What You Need:</h2>
+    <ul>
+      <li>✅ Your logo image (the blue arrow with "1")</li>
+      <li>✅ Image editing tool (Photoshop, Figma, Canva, or online tool)</li>
+      <li>✅ 5 minutes of your time</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <h3>Step 1: Prepare Your Logo (1024x1024 PNG)</h3>
+    <p>You need to export your logo as a 1024x1024 PNG file:</p>
+    <ul>
+      <li><strong>Size:</strong> Exactly 1024x1024 pixels</li>
+      <li><strong>Format:</strong> PNG (with or without transparency)</li>
+      <li><strong>Background:</strong> Blue (#2563eb) or transparent</li>
+      <li><strong>File name:</strong> <code>icon.png</code></li>
+    </ul>
+    
+    <h4>Quick Online Tools:</h4>
+    <ul>
+      <li><a href="https://www.canva.com" target="_blank">Canva</a> - Easy to use</li>
+      <li><a href="https://www.photopea.com" target="_blank">Photopea</a> - Free Photoshop alternative</li>
+      <li><a href="https://squoosh.app" target="_blank">Squoosh</a> - Image resizer</li>
+    </ul>
+  </div>
+
+  <div class="step">
+    <h3>Step 2: Save in Correct Location</h3>
+    <p>Place your <code>icon.png</code> file here:</p>
+    <div class="command">
+      tradetalk/v2-social-hybrid/resources/icon.png
+    </div>
+    <p>Replace the existing <code>icon.svg</code> file in that folder.</p>
+  </div>
+
+  <div class="step">
+    <h3>Step 3: Generate Icons</h3>
+    <p>Open Terminal and run:</p>
+    <div class="command">
+      cd /Users/dhwanibalchandani/Developer/tradetalk/v2-social-hybrid<br>
+      npm run generate-icons
+    </div>
+    <p>This will create all the iOS icon sizes automatically!</p>
+  </div>
+
+  <div class="step">
+    <h3>Step 4: Build & Open in Xcode</h3>
+    <div class="command">
+      npm run ios:build<br>
+      npm run ios:open
+    </div>
+    <p>Your app will open in Xcode with the new icon! 🎉</p>
+  </div>
+
+  <div class="step">
+    <h3>Alternative: I'll Create a PNG for You!</h3>
+    <p>If you want, you can:</p>
+    <ol>
+      <li>Share the logo file with me</li>
+      <li>Or tell me the exact dimensions and I'll create the proper icon.png</li>
+      <li>Or use an online tool to convert your logo to 1024x1024 PNG</li>
+    </ol>
+  </div>
+
+  <div class="checklist">
+    <h2>Final Checklist:</h2>
+    <ul>
+      <li>☐ Logo saved as 1024x1024 PNG</li>
+      <li>☐ Named <code>icon.png</code></li>
+      <li>☐ Placed in <code>resources/</code> folder</li>
+      <li>☐ Ran <code>npm run generate-icons</code></li>
+      <li>☐ Ran <code>npm run ios:build</code></li>
+      <li>☐ Opened in Xcode</li>
+      <li>☐ Icon appears in app! 🎉</li>
+    </ul>
+  </div>
+
+  <hr>
+  <p><small>Need help? Check <code>ICON_SETUP_GUIDE.md</code> or <code>resources/README.md</code></small></p>
+</body>
+</html>

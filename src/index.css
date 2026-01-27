@@ -1,0 +1,166 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-black text-white antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    letter-spacing: -0.011em;
+  }
+  
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-light tracking-tight;
+  }
+}
+
+@layer components {
+  /* Premium Button Styles - Clear hierarchy */
+  .btn-primary {
+    @apply bg-white text-black px-8 py-4 text-sm font-medium hover:bg-gray-100 transition-all duration-200;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-900 text-white px-8 py-4 text-sm font-medium hover:bg-gray-800 transition-all duration-200;
+  }
+  
+  .btn-ghost {
+    @apply text-gray-400 hover:text-white text-sm transition-colors duration-200;
+  }
+  
+  /* Premium Input Styles - Underline > boxes */
+  .input-underline {
+    @apply w-full px-0 py-3 bg-transparent border-0 border-b border-gray-900 text-white placeholder-gray-500 focus:border-white outline-none transition-colors duration-200;
+  }
+  
+  .input-minimal {
+    @apply w-full px-4 py-3 bg-black border border-gray-900 text-white placeholder-gray-500 focus:border-gray-800 outline-none transition-colors duration-200 text-sm;
+  }
+  
+  /* Card Styles - Subtle depth */
+  .card-premium {
+    @apply bg-black border border-gray-900 hover:border-gray-800 transition-colors duration-200;
+  }
+  
+  .card-elevated {
+    @apply bg-gradient-to-b from-gray-950 to-black border border-gray-900;
+  }
+  
+  /* Text Hierarchy - Improved contrast for readability */
+  .text-primary {
+    @apply text-white font-light;
+  }
+  
+  .text-secondary {
+    @apply text-gray-400 text-sm;
+  }
+  
+  .text-tertiary {
+    @apply text-gray-500 text-xs;
+  }
+  
+  /* Financial Semantic Colors - Use ONLY for data */
+  .text-profit {
+    @apply text-green-500;
+  }
+  
+  .text-loss {
+    @apply text-red-500;
+  }
+  
+  .bg-profit {
+    @apply bg-green-500/10;
+  }
+  
+  .bg-loss {
+    @apply bg-red-500/10;
+  }
+  
+  .border-profit {
+    @apply border-green-500;
+  }
+  
+  .border-loss {
+    @apply border-red-500;
+  }
+  
+  /* Premium Typography */
+  .heading-xl {
+    @apply text-6xl md:text-7xl font-light leading-none tracking-tight;
+  }
+  
+  .heading-lg {
+    @apply text-4xl md:text-5xl font-light leading-tight tracking-tight;
+  }
+  
+  .heading-md {
+    @apply text-2xl md:text-3xl font-light tracking-tight;
+  }
+  
+  /* Premium Navigation */
+  .nav-item {
+    @apply text-gray-600 hover:text-white transition-colors duration-200;
+  }
+  
+  .nav-item-active {
+    @apply text-white;
+  }
+  
+  /* Interactive States - Subtle but noticeable */
+  .interactive-area {
+    @apply active:scale-[0.98] transition-transform duration-100;
+  }
+  
+  /* Dividers */
+  .divider-subtle {
+    @apply border-t border-gray-950;
+  }
+  
+  .divider-minimal {
+    @apply border-t border-gray-900;
+  }
+  
+  /* Status Indicators */
+  .status-live {
+    @apply w-2 h-2 bg-red-500 rounded-full animate-pulse;
+  }
+  
+  .status-online {
+    @apply w-2 h-2 bg-green-500 rounded-full;
+  }
+}
+
+/* Custom Scrollbar - Premium minimal */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2a2a2a;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection styling */
+::selection {
+  background: #fff;
+  color: #000;
+}
