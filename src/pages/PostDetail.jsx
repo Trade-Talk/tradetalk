@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, Loader, Heart, Trash2 } from 'lucide-react'
+import { ArrowLeft, Send, Loader, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { db } from '../lib/supabase'
 import toast from 'react-hot-toast'
@@ -96,146 +96,140 @@ export default function PostDetail() {
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
 
-    if (minutes < 1) return 'Just now'
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    if (days < 7) return `${days}d ago`
+    if (minutes < 1) return 'now'
+    if (minutes < 60) return `${minutes}m`
+    if (hours < 24) return `${hours}h`
+    if (days < 7) return `${days}d`
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
   if (loading) {
     return (
-      <div className="h-screen bg-white flex items-center justify-center">
-        <Loader className="w-8 h-8 text-primary-600 animate-spin" />
+      <div className="h-screen bg-black flex items-center justify-center">
+        <Loader className="w-8 h-8 text-white animate-spin" />
       </div>
     )
   }
 
   if (!post) {
     return (
-      <div className="h-screen bg-white flex flex-col items-center justify-center px-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Post not found</h2>
+      <div className="h-screen bg-black flex flex-col items-center justify-center px-6">
+        <h2 className="text-xl font-light text-white mb-2">Post not found</h2>
         <button
           onClick={() => navigate('/')}
-          className="text-primary-600 font-medium"
+          className="text-gray-400 font-light"
         >
-          Go back to feed
+          Go back
         </button>
       </div>
     )
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col safe-area-top overflow-hidden">
+    <div className="h-screen bg-black flex flex-col safe-area-top overflow-hidden">
       {/* Header */}
-      <header className="border-b border-gray-200 px-4 py-3 flex items-center">
+      <header className="border-b border-gray-950 px-4 py-3 flex items-center">
         <button 
           onClick={() => navigate(-1)}
-          className="p-2 -ml-2 hover:bg-gray-100 rounded-full active:scale-95 transition-transform touch-manipulation"
+          className="p-2 -ml-2 hover:bg-gray-950 rounded-full active:scale-95 transition-transform touch-manipulation"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-700" />
+          <ArrowLeft className="w-5 h-5 text-gray-400" strokeWidth={1.5} />
         </button>
-        <h1 className="text-lg font-semibold text-gray-900 ml-2">Post</h1>
+        <h1 className="text-base font-light text-white ml-2">Post</h1>
       </header>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-20">
         {/* Post */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-start space-x-3 mb-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
+        <div className="p-4 border-b border-gray-950">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-11 h-11 bg-gradient-to-br from-gray-800 to-black rounded-full flex items-center justify-center text-white font-light border border-gray-900">
               {post.author?.avatar_url ? (
                 <img src={post.author.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
               ) : (
-                post.author?.full_name?.[0] || 'U'
+                <span className="text-sm">{post.author?.full_name?.[0] || 'U'}</span>
               )}
             </div>
             <div>
-              <div className="flex items-center space-x-2">
-                <p className="font-semibold text-gray-900">
+              <div className="flex items-center gap-2">
+                <p className="font-light text-white text-sm">
                   {post.author?.full_name || 'Unknown'}
                 </p>
                 {post.author?.user_type === 'advisor' && post.author?.is_verified && (
-                  <span className="text-primary-600" title="Verified Advisor">✓</span>
+                  <span className="text-white text-xs">✓</span>
                 )}
               </div>
-              <p className="text-sm text-gray-500">@{post.author?.username}</p>
+              <p className="text-xs text-gray-600 font-light">@{post.author?.username}</p>
             </div>
           </div>
 
           {post.content && (
-            <p className="text-gray-900 text-lg mb-3 whitespace-pre-wrap break-words">
+            <p className="text-white text-[15px] mb-3 whitespace-pre-wrap break-words font-light leading-snug">
               {post.content}
             </p>
           )}
 
           {post.images && post.images.length > 0 && (
-            <div className="mb-3 space-y-2">
+            <div className="mb-3 rounded-xl overflow-hidden">
               {post.images.map((image, index) => (
                 <img
                   key={index}
                   src={image}
-                  alt={`Post image ${index + 1}`}
-                  className="w-full rounded-lg"
+                  alt=""
+                  className="w-full"
                 />
               ))}
             </div>
           )}
 
-          <p className="text-sm text-gray-500 mb-3">{formatDate(post.created_at)}</p>
+          <p className="text-xs text-gray-600 font-light mb-3">{formatDate(post.created_at)}</p>
 
-          <div className="flex items-center space-x-6 text-gray-600 pt-3 border-t border-gray-200">
-            <span className="text-sm"><strong>{post.likes_count || 0}</strong> Likes</span>
-            <span className="text-sm"><strong>{comments.length}</strong> Comments</span>
+          <div className="flex items-center gap-4 text-gray-600 pt-2 border-t border-gray-950">
+            <span className="text-sm font-light"><strong className="text-white">{post.likes_count || 0}</strong> likes</span>
+            <span className="text-sm font-light"><strong className="text-white">{comments.length}</strong> comments</span>
           </div>
         </div>
 
         {/* Comments */}
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-950">
           {comments.length === 0 ? (
-            <div className="py-12 text-center text-gray-500">
-              <p>No comments yet</p>
-              <p className="text-sm mt-1">Be the first to comment!</p>
+            <div className="py-12 text-center text-gray-600">
+              <p className="font-light">No comments yet</p>
+              <p className="text-sm mt-1 font-light">Be the first to comment</p>
             </div>
           ) : (
             comments.map((comment) => (
               <div key={comment.id} className="p-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 bg-gradient-to-br from-gray-800 to-black rounded-full flex items-center justify-center text-white font-light flex-shrink-0 border border-gray-900">
                     {comment.author?.avatar_url ? (
                       <img src={comment.author.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
                     ) : (
-                      comment.author?.full_name?.[0] || 'U'
+                      <span className="text-xs">{comment.author?.full_name?.[0] || 'U'}</span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2 min-w-0">
-                        <p className="font-semibold text-gray-900 text-sm truncate">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="font-light text-white text-sm truncate">
                           {comment.author?.full_name || 'Unknown'}
                         </p>
-                        <span className="text-xs text-gray-500 flex-shrink-0">
-                          {formatDate(comment.created_at)}
+                        <span className="text-xs text-gray-600 flex-shrink-0">
+                          · {formatDate(comment.created_at)}
                         </span>
                       </div>
                       {user?.id === comment.author_id && (
                         <button
                           onClick={() => handleDeleteComment(comment.id)}
-                          className="p-1 hover:bg-red-50 rounded text-red-600 touch-manipulation"
+                          className="p-1 hover:bg-gray-950 rounded text-gray-600 hover:text-red-500 touch-manipulation"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                         </button>
                       )}
                     </div>
-                    <p className="text-gray-900 text-sm mt-1 break-words">
+                    <p className="text-white text-sm mt-1 break-words font-light leading-snug">
                       {comment.content}
                     </p>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <button className="flex items-center space-x-1 text-gray-500 hover:text-red-500 text-xs">
-                        <Heart className="w-3.5 h-3.5" />
-                        <span>{comment.likes_count || 0}</span>
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -245,31 +239,27 @@ export default function PostDetail() {
       </div>
 
       {/* Comment Input */}
-      <div className="border-t border-gray-200 p-4 bg-white">
-        <div className="flex items-end space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
+      <div className="border-t border-gray-950 p-4 bg-black">
+        <div className="flex items-end gap-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-gray-800 to-black rounded-full flex items-center justify-center text-white font-light flex-shrink-0 border border-gray-900">
             {user?.avatar_url ? (
               <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
             ) : (
-              user?.full_name?.[0] || 'U'
+              <span className="text-xs">{user?.full_name?.[0] || 'U'}</span>
             )}
           </div>
-          <div className="flex-1 flex items-end space-x-2">
-            <textarea
+          <div className="flex-1 flex items-end gap-2">
+            <input
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handlePostComment()}
               placeholder="Write a comment..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent max-h-32"
-              rows="1"
-              onInput={(e) => {
-                e.target.style.height = 'auto'
-                e.target.style.height = e.target.scrollHeight + 'px'
-              }}
+              className="flex-1 px-4 py-2.5 bg-gray-950 border border-gray-900 text-white placeholder-gray-600 rounded-full focus:outline-none focus:border-white transition-colors font-light text-sm"
             />
             <button
               onClick={handlePostComment}
               disabled={!newComment.trim() || posting}
-              className="p-2 bg-primary-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform touch-manipulation"
+              className="p-2.5 bg-white text-black rounded-full disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform touch-manipulation"
             >
               {posting ? (
                 <Loader className="w-5 h-5 animate-spin" />

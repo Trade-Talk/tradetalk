@@ -3,7 +3,28 @@ import { useNavigate } from 'react-router-dom'
 import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { db } from '../../lib/supabase'
+import StockTag from '../market/StockTag'
 import toast from 'react-hot-toast'
+
+// Extract stock symbols from text
+const extractStockSymbols = (text) => {
+  if (!text) return []
+  const matches = text.match(/\$[A-Z]{1,5}\b/g) || []
+  return [...new Set(matches.map(s => s.substring(1)))]
+}
+
+// Replace stock symbols with placeholders
+const replaceStockSymbols = (text) => {
+  if (!text) return { text, symbols: [] }
+  const symbols = extractStockSymbols(text)
+  let processedText = text
+  
+  symbols.forEach((symbol, index) => {
+    processedText = processedText.replace(new RegExp(`\\$${symbol}\\b`, 'g'), `__STOCK_${index}__`)
+  })
+  
+  return { text: processedText, symbols }
+}
 
 export default function PostCard({ post, onDelete }) {
   const navigate = useNavigate()
@@ -14,9 +35,6 @@ export default function PostCard({ post, onDelete }) {
   const [deleting, setDeleting] = useState(false)
 
   const isOwnPost = user?.id === post.author_id
-
-  // Handle both image_url (single) and images (array) for backwards compatibility
-  const postImages = post.images || (post.image_url ? [post.image_url] : [])
 
   const handleLike = async (e) => {
     e.stopPropagation()
@@ -77,6 +95,10 @@ export default function PostCard({ post, onDelete }) {
     if (days < 7) return `${days}d`
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
+
+  // Process content with stock symbols
+  const { text: processedText, symbols: stockSymbols } = replaceStockSymbols(post.content)
+  const contentParts = processedText ? processedText.split(/(__STOCK_\d+__)/) : []
 
   return (
     <div className="cursor-pointer" onClick={() => navigate(`/post/${post.id}`)}>
@@ -151,25 +173,37 @@ export default function PostCard({ post, onDelete }) {
         )}
       </div>
 
-      {/* Content */}
+      {/* Content with inline stock tags */}
       {post.content && (
-        <p className="text-white mb-2 whitespace-pre-wrap break-words font-light text-[15px] leading-snug">
-          {post.content}
-        </p>
+        <div className="mb-2 whitespace-pre-wrap break-words font-light text-[15px] leading-snug">
+          {contentParts.map((part, index) => {
+            const stockMatch = part.match(/__STOCK_(\d+)__/)
+            if (stockMatch) {
+              const stockIndex = parseInt(stockMatch[1])
+              const symbol = stockSymbols[stockIndex]
+              return (
+                <span key={index} onClick={(e) => e.stopPropagation()}>
+                  <StockTag symbol={symbol} compact={true} />
+                </span>
+              )
+            }
+            return <span key={index} className="text-white">{part}</span>
+          })}
+        </div>
       )}
 
       {/* Images */}
-      {postImages.length > 0 && (
+      {post.images && post.images.length > 0 && (
         <div className={`mb-2.5 rounded-xl overflow-hidden ${
-          postImages.length === 1 ? '' :
+          post.images.length === 1 ? '' :
           'grid grid-cols-2 gap-0.5'
         }`}>
-          {postImages.slice(0, 4).map((image, index) => (
+          {post.images.slice(0, 4).map((image, index) => (
             <div 
               key={index}
               className={`relative ${
-                postImages.length === 1 ? 'aspect-video' :
-                postImages.length === 3 && index === 0 ? 'col-span-2 aspect-video' :
+                post.images.length === 1 ? 'aspect-video' :
+                post.images.length === 3 && index === 0 ? 'col-span-2 aspect-video' :
                 'aspect-square'
               } overflow-hidden bg-gray-950`}
             >
@@ -179,13 +213,25 @@ export default function PostCard({ post, onDelete }) {
                 className="w-full h-full object-cover"
                 onClick={(e) => e.stopPropagation()}
               />
-              {postImages.length > 4 && index === 3 && (
+              {post.images.length > 4 && index === 3 && (
                 <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                  <span className="text-white text-xl font-light">+{postImages.length - 4}</span>
+                  <span className="text-white text-xl font-light">+{post.images.length - 4}</span>
                 </div>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Single image from image_url (MVP compatibility) */}
+      {post.image_url && !post.images && (
+        <div className="mb-2.5 rounded-xl overflow-hidden">
+          <img
+            src={post.image_url}
+            alt=""
+            className="w-full aspect-video object-cover bg-gray-950"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 

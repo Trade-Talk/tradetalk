@@ -12,6 +12,7 @@ import {
   TrendingDown
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import InlineStockChart from './InlineStockChart'
 
 export default function PostCard({ post }) {
   const [isLiked, setIsLiked] = useState(post.isLiked)
@@ -103,6 +104,20 @@ export default function PostCard({ post }) {
         
         {/* Stock symbols */}
         {renderStockSymbols()}
+        
+        {/* Stock Charts (if post has stocks with price data) */}
+        {post.stocks && post.stocks.length > 0 && (
+          <div className="mt-3 space-y-3">
+            {post.stocks.map((stock, index) => (
+              <InlineStockChart
+                key={`${stock.symbol}-${index}`}
+                stock={stock}
+                postTimestamp={post.timestamp}
+                priceAtPost={stock.priceAtPost || stock.price}
+              />
+            ))}
+          </div>
+        )}
         
         {/* Images (if any) */}
         {post.images && post.images.length > 0 && (

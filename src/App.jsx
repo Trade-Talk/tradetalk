@@ -9,20 +9,22 @@ import MobileLayout from './components/MobileLayout'
 // Lazy load pages
 const FeedPageIntegrated = lazy(() => import('./pages/FeedPageIntegrated'))
 const ExplorePage = lazy(() => import('./pages/ExplorePage'))
-const CreatePost = lazy(() => import('./pages/CreatePost'))
+const CreatePost = lazy(() => import('./pages/CreatePostImproved'))
 const CreateSignalPage = lazy(() => import('./pages/CreateSignalPage'))
 const ChatsPage = lazy(() => import('./pages/ChatsPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const AdvisorProfileEnhanced = lazy(() => import('./pages/AdvisorProfileEnhanced'))
 const PostDetail = lazy(() => import('./pages/PostDetail'))
 const ChatRoom = lazy(() => import('./pages/ChatRoom'))
+const DebatePage = lazy(() => import('./pages/DebatePage'))
 
 // Friends Pages
-const AddFriends = lazy(() => import('./pages/friends/AddFriends'))
+const AddFriends = lazy(() => import('./pages/friends/AddFriendsInstagram'))
 const ConnectionRequests = lazy(() => import('./pages/friends/ConnectionRequests'))
 
 // Demo Pages
 const SmartSignalDemo = lazy(() => import('./pages/SmartSignalDemo'))
+const MarketDataDemo = lazy(() => import('./pages/MarketDataDemo'))
 
 // Advisor Tools Pages
 const AdvisorDashboard = lazy(() => import('./pages/advisor-tools/AdvisorDashboard'))
@@ -101,9 +103,11 @@ function AppRoutes() {
         <Route path="/profile/:userId" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/advisor/:id" element={<ProtectedRoute><AdvisorProfileEnhanced /></ProtectedRoute>} />
         <Route path="/chat/:id" element={<ProtectedRoute><ChatRoom /></ProtectedRoute>} />
+        <Route path="/debate/:debateId" element={<ProtectedRoute><DebatePage /></ProtectedRoute>} />
         <Route path="/add-friends" element={<ProtectedRoute><AddFriends /></ProtectedRoute>} />
         <Route path="/connection-requests" element={<ProtectedRoute><ConnectionRequests /></ProtectedRoute>} />
         <Route path="/demo/smart-signals" element={<ProtectedRoute><SmartSignalDemo /></ProtectedRoute>} />
+        <Route path="/demo/market-data" element={<ProtectedRoute><MarketDataDemo /></ProtectedRoute>} />
         
         {/* Advisor Tools Routes */}
         <Route path="/advisor-tools" element={<ProtectedRoute><AdvisorDashboard /></ProtectedRoute>} />

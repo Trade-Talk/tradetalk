@@ -43,49 +43,49 @@ export default function FeedPage() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-white flex flex-col safe-area-top overflow-hidden">
-        <header className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">TradeTalk</h1>
+      <div className="h-screen bg-black flex flex-col safe-area-top overflow-hidden">
+        <header className="border-b border-gray-950 px-4 py-3 flex items-center justify-between">
+          <h1 className="text-xl font-light text-white">TradeTalk</h1>
           <div className="flex items-center space-x-2">
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <Search className="w-5 h-5 text-gray-700" />
+            <button className="p-2 hover:bg-gray-950 rounded-full">
+              <Search className="w-5 h-5 text-gray-400" />
             </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full relative">
-              <Bell className="w-5 h-5 text-gray-700" />
+            <button className="p-2 hover:bg-gray-950 rounded-full relative">
+              <Bell className="w-5 h-5 text-gray-400" />
             </button>
           </div>
         </header>
         <div className="flex-1 flex items-center justify-center">
-          <Loader className="w-8 h-8 text-primary-600 animate-spin" />
+          <Loader className="w-8 h-8 text-white animate-spin" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col safe-area-top overflow-hidden">
+    <div className="h-screen bg-black flex flex-col safe-area-top overflow-hidden">
       {/* Header */}
-      <header className="border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 bg-white z-10">
-        <h1 className="text-xl font-bold text-gray-900">TradeTalk</h1>
+      <header className="border-b border-gray-950 px-4 py-3 flex items-center justify-between sticky top-0 bg-black z-10">
+        <h1 className="text-xl font-light text-white">TradeTalk</h1>
         <div className="flex items-center space-x-2">
           <button 
             onClick={handleRefresh}
             disabled={refreshing}
-            className="p-2 hover:bg-gray-100 rounded-full active:scale-95 transition-transform touch-manipulation disabled:opacity-50"
+            className="p-2 hover:bg-gray-950 rounded-full active:scale-95 transition-transform touch-manipulation disabled:opacity-50"
           >
-            <RefreshCw className={`w-5 h-5 text-gray-700 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-5 h-5 text-gray-400 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           <button 
             onClick={() => navigate('/search')}
-            className="p-2 hover:bg-gray-100 rounded-full active:scale-95 transition-transform touch-manipulation"
+            className="p-2 hover:bg-gray-950 rounded-full active:scale-95 transition-transform touch-manipulation"
           >
-            <Search className="w-5 h-5 text-gray-700" />
+            <Search className="w-5 h-5 text-gray-400" />
           </button>
           <button 
             onClick={() => navigate('/notifications')}
-            className="p-2 hover:bg-gray-100 rounded-full relative active:scale-95 transition-transform touch-manipulation"
+            className="p-2 hover:bg-gray-950 rounded-full relative active:scale-95 transition-transform touch-manipulation"
           >
-            <Bell className="w-5 h-5 text-gray-700" />
+            <Bell className="w-5 h-5 text-gray-400" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
         </div>
@@ -95,28 +95,29 @@ export default function FeedPage() {
       <div className="flex-1 overflow-y-auto pb-20">
         {posts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-6">
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <div className="w-24 h-24 bg-gray-950 rounded-full flex items-center justify-center mb-4">
               <span className="text-4xl">📱</span>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome to TradeTalk!</h3>
-            <p className="text-gray-600 text-center mb-6">
-              Start following advisors and investors to see their posts here
+            <h3 className="text-lg font-light text-white mb-2">Welcome to TradeTalk!</h3>
+            <p className="text-gray-500 text-center mb-6 text-sm">
+              Start following people to see their posts here
             </p>
             <button
               onClick={() => navigate('/explore')}
-              className="px-6 py-3 bg-primary-600 text-white rounded-lg font-medium active:scale-95 transition-transform touch-manipulation"
+              className="px-6 py-3 bg-white text-black rounded-lg font-medium active:scale-95 transition-transform touch-manipulation"
             >
-              Explore Users
+              Explore
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-950">
             {posts.map((post) => (
-              <PostCard 
-                key={post.id} 
-                post={post}
-                onDelete={handlePostDelete}
-              />
+              <div key={post.id} className="p-4">
+                <PostCard 
+                  post={post}
+                  onDelete={handlePostDelete}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -125,7 +126,7 @@ export default function FeedPage() {
       {/* Floating Action Button */}
       <button
         onClick={() => navigate('/create-post')}
-        className="fixed bottom-20 right-4 w-14 h-14 bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 active:scale-95 transition-all flex items-center justify-center z-20 touch-manipulation"
+        className="fixed bottom-20 right-4 w-14 h-14 bg-white text-black rounded-full shadow-lg hover:bg-gray-100 active:scale-95 transition-all flex items-center justify-center z-20 touch-manipulation"
       >
         <Plus className="w-6 h-6" />
       </button>

@@ -15,6 +15,7 @@
   "dependencies": {
     "@capacitor/ios": "^8.0.1",
     "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.13.3",
     "date-fns": "^2.30.0",
     "framer-motion": "^10.16.16",
     "lucide-react": "^0.294.0",

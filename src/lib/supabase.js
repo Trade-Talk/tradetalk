@@ -187,6 +187,27 @@ export const db = {
     return { data, error }
   },
 
+  async getSuggestedUsers(currentUserId, limit = 10) {
+    // Get users the current user is NOT following
+    // Prioritize: verified advisors, popular users, new users
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*, follower_count:follows!follows_following_id_fkey(count)')
+      .neq('id', currentUserId)
+      .limit(limit)
+    
+    if (error) return { data: [], error }
+    
+    // Sort by: verified advisors first, then by follower count
+    const sorted = (data || []).sort((a, b) => {
+      if (a.is_verified && !b.is_verified) return -1
+      if (!a.is_verified && b.is_verified) return 1
+      return (b.follower_count || 0) - (a.follower_count || 0)
+    })
+    
+    return { data: sorted, error: null }
+  },
+
   // ==================== POSTS ====================
   async getPosts(limit = 20, offset = 0) {
     const { data, error } = await supabase

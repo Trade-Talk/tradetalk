@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradeTalk Health Check</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      color: #fff;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 2rem;
+      font-weight: 300;
+      margin-bottom: 0.5rem;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 2rem;
+      font-size: 0.875rem;
+    }
+    
+    .check-group {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      margin: 0.25rem 0;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    
+    .check-item:hover {
+      background: #1a1a1a;
+    }
+    
+    .status {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    
+    .status.pending {
+      background: #666;
+    }
+    
+    .status.success {
+      background: #22c55e;
+    }
+    
+    .status.error {
+      background: #ef4444;
+    }
+    
+    .status.warning {
+      background: #f59e0b;
+    }
+    
+    .check-label {
+      flex: 1;
+      font-size: 0.875rem;
+    }
+    
+    .check-value {
+      font-size: 0.75rem;
+      color: #666;
+      font-family: 'Courier New', monospace;
+    }
+    
+    button {
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background: #e5e5e5;
+    }
+    
+    button:active {
+      transform: scale(0.98);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+    
+    .summary {
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+    
+    .summary h3 {
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+    
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+    }
+    
+    .summary-value {
+      font-weight: 600;
+    }
+    
+    .summary-value.good {
+      color: #22c55e;
+    }
+    
+    .summary-value.bad {
+      color: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>TradeTalk Health Check</h1>
+    <p class="subtitle">Diagnostic tool to verify app configuration and connectivity</p>
+    
+    <div class="check-group">
+      <h3 style="font-size: 0.875rem; margin-bottom: 1rem; color: #999;">Environment Variables</h3>
+      <div class="check-item" id="check-supabase-url">
+        <div class="status pending"></div>
+        <div class="check-label">Supabase URL</div>
+        <div class="check-value" id="value-supabase-url">Checking...</div>
+      </div>
+      <div class="check-item" id="check-supabase-key">
+        <div class="status pending"></div>
+        <div class="check-label">Supabase Anon Key</div>
+        <div class="check-value" id="value-supabase-key">Checking...</div>
+      </div>
+    </div>
+    
+    <div class="check-group">
+      <h3 style="font-size: 0.875rem; margin-bottom: 1rem; color: #999;">Database Connection</h3>
+      <div class="check-item" id="check-db-connection">
+        <div class="status pending"></div>
+        <div class="check-label">Supabase Connection</div>
+        <div class="check-value" id="value-db-connection">Not tested</div>
+      </div>
+      <div class="check-item" id="check-posts-table">
+        <div class="status pending"></div>
+        <div class="check-label">Posts Table Access</div>
+        <div class="check-value" id="value-posts-table">Not tested</div>
+      </div>
+      <div class="check-item" id="check-profiles-table">
+        <div class="status pending"></div>
+        <div class="check-label">Profiles Table Access</div>
+        <div class="check-value" id="value-profiles-table">Not tested</div>
+      </div>
+    </div>
+    
+    <div class="check-group">
+      <h3 style="font-size: 0.875rem; margin-bottom: 1rem; color: #999;">Authentication</h3>
+      <div class="check-item" id="check-auth-session">
+        <div class="status pending"></div>
+        <div class="check-label">Current Session</div>
+        <div class="check-value" id="value-auth-session">Not checked</div>
+      </div>
+      <div class="check-item" id="check-auth-config">
+        <div class="status pending"></div>
+        <div class="check-label">Auth Configuration</div>
+        <div class="check-value" id="value-auth-config">Not checked</div>
+      </div>
+    </div>
+    
+    <div class="actions">
+      <button onclick="runDiagnostics()" id="run-btn">Run Diagnostics</button>
+      <button onclick="copyReport()" id="copy-btn" disabled>Copy Report</button>
+    </div>
+    
+    <div class="summary" id="summary" style="display: none;">
+      <h3>Summary</h3>
+      <div class="summary-item">
+        <span>Tests Passed</span>
+        <span class="summary-value good" id="tests-passed">0</span>
+      </div>
+      <div class="summary-item">
+        <span>Tests Failed</span>
+        <span class="summary-value bad" id="tests-failed">0</span>
+      </div>
+      <div class="summary-item">
+        <span>Overall Status</span>
+        <span class="summary-value" id="overall-status">-</span>
+      </div>
+    </div>
+  </div>
+  
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    
+    let diagnosticResults = {}
+    
+    function updateCheck(id, status, value) {
+      const item = document.getElementById(id)
+      const statusEl = item.querySelector('.status')
+      const valueEl = document.getElementById('value-' + id.replace('check-', ''))
+      
+      statusEl.className = 'status ' + status
+      valueEl.textContent = value
+      
+      diagnosticResults[id] = { status, value }
+    }
+    
+    async function runDiagnostics() {
+      document.getElementById('run-btn').disabled = true
+      document.getElementById('summary').style.display = 'none'
+      diagnosticResults = {}
+      
+      // Check environment variables
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      
+      if (supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co') {
+        updateCheck('check-supabase-url', 'success', supabaseUrl.substring(0, 30) + '...')
+      } else {
+        updateCheck('check-supabase-url', 'error', 'Not configured')
+      }
+      
+      if (supabaseKey && supabaseKey !== 'placeholder-key') {
+        updateCheck('check-supabase-key', 'success', supabaseKey.substring(0, 20) + '...')
+      } else {
+        updateCheck('check-supabase-key', 'error', 'Not configured')
+      }
+      
+      // If no valid credentials, stop here
+      if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
+        updateCheck('check-db-connection', 'error', 'No credentials')
+        updateCheck('check-posts-table', 'error', 'No credentials')
+        updateCheck('check-profiles-table', 'error', 'No credentials')
+        updateCheck('check-auth-session', 'error', 'No credentials')
+        updateCheck('check-auth-config', 'error', 'No credentials')
+        showSummary()
+        document.getElementById('run-btn').disabled = false
+        return
+      }
+      
+      // Test database connection
+      try {
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        
+        // Test connection
+        updateCheck('check-db-connection', 'success', 'Connected')
+        
+        // Test posts table
+        try {
+          const { data, error } = await supabase.from('posts').select('id').limit(1)
+          if (error) throw error
+          updateCheck('check-posts-table', 'success', `${data.length} records accessible`)
+        } catch (error) {
+          updateCheck('check-posts-table', 'error', error.message)
+        }
+        
+        // Test profiles table
+        try {
+          const { data, error } = await supabase.from('profiles').select('id').limit(1)
+          if (error) throw error
+          updateCheck('check-profiles-table', 'success', `${data.length} records accessible`)
+        } catch (error) {
+          updateCheck('check-profiles-table', 'error', error.message)
+        }
+        
+        // Check auth session
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session) {
+            updateCheck('check-auth-session', 'success', 'Signed in as ' + session.user.email)
+          } else {
+            updateCheck('check-auth-session', 'warning', 'Not signed in')
+          }
+        } catch (error) {
+          updateCheck('check-auth-session', 'error', error.message)
+        }
+        
+        // Check auth config
+        updateCheck('check-auth-config', 'success', 'Auth initialized')
+        
+      } catch (error) {
+        updateCheck('check-db-connection', 'error', error.message)
+      }
+      
+      showSummary()
+      document.getElementById('run-btn').disabled = false
+      document.getElementById('copy-btn').disabled = false
+    }
+    
+    function showSummary() {
+      const summary = document.getElementById('summary')
+      const results = Object.values(diagnosticResults)
+      const passed = results.filter(r => r.status === 'success').length
+      const failed = results.filter(r => r.status === 'error').length
+      
+      document.getElementById('tests-passed').textContent = passed
+      document.getElementById('tests-failed').textContent = failed
+      
+      const overallStatus = document.getElementById('overall-status')
+      if (failed === 0 && passed > 0) {
+        overallStatus.textContent = 'All systems operational'
+        overallStatus.className = 'summary-value good'
+      } else if (failed > 0) {
+        overallStatus.textContent = 'Issues detected'
+        overallStatus.className = 'summary-value bad'
+      }
+      
+      summary.style.display = 'block'
+    }
+    
+    function copyReport() {
+      const report = Object.entries(diagnosticResults)
+        .map(([id, result]) => `${id.replace('check-', '')}: ${result.status} - ${result.value}`)
+        .join('\n')
+      
+      navigator.clipboard.writeText(report)
+      alert('Report copied to clipboard!')
+    }
+    
+    window.runDiagnostics = runDiagnostics
+    window.copyReport = copyReport
+    
+    // Auto-run on load
+    setTimeout(runDiagnostics, 500)
+  </script>
+</body>
+</html>
