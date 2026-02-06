@@ -21,29 +21,6 @@ export const authHelpers = {
       })
       
       if (error) throw error
-
-      // Profile is auto-created by trigger, but verify it exists
-      if (data.user && data.user.id) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        const { data: existingProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', data.user.id)
-          .single()
-        
-        if (profileError && profileError.code === 'PGRST116') {
-          // Manually create profile if trigger failed
-          await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              email,
-              full_name: metadata.full_name || 'User',
-              username: metadata.username || `user_${data.user.id.substring(0, 8)}`
-            })
-        }
-      }
       
       return { data, error: null }
     } catch (error) {

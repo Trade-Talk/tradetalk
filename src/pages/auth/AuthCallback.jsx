@@ -6,7 +6,7 @@ import toast from 'react-hot-toast'
 
 export default function AuthCallback() {
   const navigate = useNavigate()
-  const [status, setStatus] = useState('Processing...')
+  const [status, setStatus] = useState('Processing authentication...')
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -14,56 +14,53 @@ export default function AuthCallback() {
         // Get the session from the URL hash
         const { data: { session }, error } = await supabase.auth.getSession()
 
-        if (error) throw error
+        if (error) {
+          console.error('Session error:', error)
+          throw error
+        }
 
-        if (session) {
-          // Check if profile exists
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, username')
-            .eq('id', session.user.id)
-            .single()
-
-          // If profile doesn't exist or username is missing, need to set username
-          if (!profile || !profile.username) {
-            setStatus('Setting up your profile...')
-            
-            // Generate username from email or Google name
-            const email = session.user.email
-            const googleName = session.user.user_metadata?.full_name || session.user.user_metadata?.name
-            
-            // Create username from email or name
-            let username = email?.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '') || 'user'
-            username = username + '_' + Math.random().toString(36).substring(2, 6)
-
-            // Update or insert profile
-            const { error: upsertError } = await supabase
-              .from('profiles')
-              .upsert({
-                id: session.user.id,
-                email: session.user.email,
-                username: username,
-                full_name: googleName || username,
-                avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture
-              }, {
-                onConflict: 'id'
-              })
-
-            if (upsertError) {
-              console.error('Profile creation error:', upsertError)
-              // Continue anyway, they can update later
-            }
-          }
-
-          toast.success('Welcome to TradeTalk! 🚀')
-          navigate('/')
-        } else {
+        if (!session) {
           throw new Error('No session found')
+        }
+
+        console.log('Session found for user:', session.user.id)
+        setStatus('Checking your profile...')
+
+        // Wait a bit for database trigger to complete
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Check if profile exists and has username
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, username, full_name')
+          .eq('id', session.user.id)
+          .maybeSingle() // Use maybeSingle instead of single to avoid error if not found
+
+        if (profileError) {
+          console.error('Profile fetch error:', profileError)
+          throw profileError
+        }
+
+        console.log('Profile:', profile)
+
+        // If no profile exists or username is null/empty, redirect to setup
+        if (!profile || !profile.username) {
+          console.log('No username found, redirecting to setup')
+          setStatus('Setting up your profile...')
+          navigate('/auth/setup-username', { 
+            replace: true,
+            state: { userId: session.user.id } 
+          })
+        } else {
+          // Profile exists with username - proceed to home
+          console.log('Profile complete, redirecting to home')
+          toast.success('Welcome back! 🚀')
+          navigate('/', { replace: true })
         }
       } catch (error) {
         console.error('Auth callback error:', error)
-        toast.error('Authentication failed. Please try again.')
-        navigate('/login')
+        toast.error(error.message || 'Authentication failed. Please try again.')
+        navigate('/auth/welcome', { replace: true })
       }
     }
 
@@ -71,10 +68,10 @@ export default function AuthCallback() {
   }, [navigate])
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
       <div className="text-center">
-        <Loader className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        <Loader className="w-12 h-12 animate-spin text-gray-400 mx-auto mb-4" />
+        <h2 className="text-xl font-light mb-2">
           {status}
         </h2>
         <p className="text-gray-600">

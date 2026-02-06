@@ -29,6 +29,7 @@ import Welcome from './pages/auth/Welcome'
 import LoginMVP from './pages/auth/LoginMVP'
 import SignupMVP from './pages/auth/SignupMVP'
 import AuthCallback from './pages/auth/AuthCallback'
+import SetupUsername from './pages/auth/SetupUsername'
 
 // Loading fallback component
 function PageLoader() {
@@ -44,7 +45,7 @@ function PageLoader() {
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   
   if (loading) {
     return <PageLoader />
@@ -52,6 +53,11 @@ function ProtectedRoute({ children }) {
   
   if (!user) {
     return <Navigate to="/auth/welcome" replace />
+  }
+  
+  // If user is logged in but hasn't set a username yet, redirect to setup
+  if (user && profile && !profile.username) {
+    return <Navigate to="/auth/setup-username" replace />
   }
   
   return children
@@ -72,6 +78,21 @@ function PublicRoute({ children }) {
   return children
 }
 
+// Setup Route (only accessible when logged in but no username)
+function SetupRoute({ children }) {
+  const { user, loading } = useAuth()
+  
+  if (loading) {
+    return <PageLoader />
+  }
+  
+  if (!user) {
+    return <Navigate to="/auth/welcome" replace />
+  }
+  
+  return children
+}
+
 function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -80,6 +101,7 @@ function AppRoutes() {
         <Route path="/auth/welcome" element={<PublicRoute><Welcome /></PublicRoute>} />
         <Route path="/auth/signin" element={<PublicRoute><LoginMVP /></PublicRoute>} />
         <Route path="/auth/signup" element={<PublicRoute><SignupMVP /></PublicRoute>} />
+        <Route path="/auth/setup-username" element={<SetupRoute><SetupUsername /></SetupRoute>} />
         <Route path="/login" element={<PublicRoute><LoginMVP /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute><SignupMVP /></PublicRoute>} />
         <Route path="/auth/callback" element={<AuthCallback />} />

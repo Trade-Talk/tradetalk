@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Mail, Lock, User, Loader, X } from 'lucide-react'
+import { Mail, Lock, Loader, X } from 'lucide-react'
 import { authHelpers } from '../../lib/supabase-mvp'
 import toast from 'react-hot-toast'
 
@@ -9,7 +9,6 @@ export default function SignupMVP() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    username: '',
     fullName: ''
   })
   const [loading, setLoading] = useState(false)
@@ -19,18 +18,13 @@ export default function SignupMVP() {
     e.preventDefault()
 
     // Validation
-    if (!formData.email || !formData.password || !formData.username) {
+    if (!formData.email || !formData.password) {
       toast.error('Please fill in all required fields')
       return
     }
 
     if (formData.password.length < 6) {
       toast.error('Password must be at least 6 characters')
-      return
-    }
-
-    if (!/^[a-z0-9_]+$/.test(formData.username)) {
-      toast.error('Username can only contain lowercase letters, numbers, and underscores')
       return
     }
 
@@ -41,21 +35,18 @@ export default function SignupMVP() {
         formData.email,
         formData.password,
         {
-          username: formData.username,
-          full_name: formData.fullName || formData.username
+          full_name: formData.fullName || formData.email.split('@')[0]
         }
       )
 
       if (error) throw error
 
-      toast.success('Welcome to TradeTalk! 🚀')
-      navigate('/')
+      // Redirect to username setup page
+      navigate('/auth/setup-username', { state: { userId: data.user.id } })
     } catch (error) {
       console.error('Signup error:', error)
       if (error.message?.includes('already registered')) {
         toast.error('This email is already registered')
-      } else if (error.message?.includes('unique')) {
-        toast.error('This username is already taken')
       } else {
         toast.error(error.message || 'Failed to create account')
       }
@@ -71,7 +62,7 @@ export default function SignupMVP() {
       
       if (error) throw error
       
-      // Redirect will happen automatically via Supabase
+      // Redirect will happen automatically via AuthCallback
     } catch (error) {
       console.error('Google sign-up error:', error)
       toast.error('Failed to sign up with Google')
@@ -161,30 +152,6 @@ export default function SignupMVP() {
                 required
                 disabled={loading || googleLoading}
               />
-            </div>
-
-            {/* Username */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-light text-gray-300 mb-3">
-                Username *
-              </label>
-              <div className="flex items-center">
-                <span className="text-gray-600 mr-2">@</span>
-                <input
-                  id="username"
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
-                  className="block flex-1 px-0 py-3 border-0 border-b border-gray-800 bg-black focus:border-white focus:outline-none placeholder-gray-600 text-white"
-                  placeholder="traderkid"
-                  pattern="[a-z0-9_]+"
-                  required
-                  disabled={loading || googleLoading}
-                />
-              </div>
-              <p className="mt-2 text-xs text-gray-600">
-                Only lowercase letters, numbers, and underscores
-              </p>
             </div>
 
             {/* Full Name */}

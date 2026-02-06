@@ -1,0 +1,55 @@
+fix: prevent auto-generated gibberish usernames, add username onboarding flow
+
+## Problem
+After OAuth signup (Google/Apple), users were getting auto-generated usernames
+like '@user_2cccca19' instead of choosing their own username.
+
+## Changes
+
+### Database (supabase/fix_username_flow.sql)
+- Modified handle_new_user() trigger to set username as NULL instead of auto-generating
+- New users must now choose their own username
+- Added optional migration to reset existing gibberish usernames
+
+### Frontend Components
+1. AuthCallback.jsx
+   - Improved session and profile checking
+   - Redirects to username setup when profile has no username
+   - Better error handling and loading states
+
+2. SetupUsername.jsx  
+   - Added authentication check on mount
+   - Debounced username availability checking (300ms)
+   - Enhanced validation (3-20 chars, lowercase, numbers, underscores only)
+   - Real-time availability feedback (green check / red X)
+   - Auto-converts uppercase to lowercase
+   - Strips @ prefix if user types it
+
+3. App.jsx
+   - Added SetupRoute component for username setup page
+   - Updated ProtectedRoute to redirect users without usernames to setup
+   - Prevents accessing app without completing username setup
+
+## User Flow
+1. New signup → OAuth completes → /auth/callback
+2. Profile created with username: NULL
+3. Redirect to /auth/setup-username
+4. User chooses unique username with real-time validation
+5. Username saved → redirect to home
+6. All future logins go straight to home
+
+## Migration Required
+Run `supabase/fix_username_flow.sql` in Supabase SQL Editor
+
+## Breaking Changes
+None - existing users with valid usernames are unaffected
+
+## Testing
+- [x] New OAuth signup shows username setup
+- [x] Username validation works (length, characters)
+- [x] Availability checking works
+- [x] Cannot access app without username
+- [x] Existing users with usernames skip setup
+- [x] Protected routes enforce username requirement
+
+Closes #[issue-number]
