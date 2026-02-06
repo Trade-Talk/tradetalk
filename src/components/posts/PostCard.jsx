@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -12,11 +12,33 @@ export default function PostCard({ post, onDelete }) {
   const [likesCount, setLikesCount] = useState(post.likes_count || 0)
   const [showMenu, setShowMenu] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const isOwnPost = user?.id === post.author_id
 
   // Handle both image_url (single) and images (array) for backwards compatibility
   const postImages = post.images || (post.image_url ? [post.image_url] : [])
+
+  // Check if user has liked this post
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      if (!user) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const { data: isLiked } = await db.checkIfLiked(user.id, post.id)
+        setLiked(isLiked)
+      } catch (error) {
+        console.error('Error checking like status:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkLikeStatus()
+  }, [user, post.id])
 
   const handleLike = async (e) => {
     e.stopPropagation()
@@ -25,20 +47,27 @@ export default function PostCard({ post, onDelete }) {
       return
     }
 
+    // Optimistic update
     const newLiked = !liked
+    const oldLiked = liked
+    const oldCount = likesCount
+
     setLiked(newLiked)
     setLikesCount(newLiked ? likesCount + 1 : likesCount - 1)
 
     try {
       if (newLiked) {
-        await db.likePost(user.id, post.id)
+        const { error } = await db.likePost(user.id, post.id)
+        if (error) throw error
       } else {
-        await db.unlikePost(user.id, post.id)
+        const { error } = await db.unlikePost(user.id, post.id)
+        if (error) throw error
       }
     } catch (error) {
       console.error('Error toggling like:', error)
-      setLiked(!newLiked)
-      setLikesCount(newLiked ? likesCount - 1 : likesCount + 1)
+      // Revert on error
+      setLiked(oldLiked)
+      setLikesCount(oldCount)
       toast.error('Failed to update like')
     }
   }
@@ -93,21 +122,23 @@ export default function PostCard({ post, onDelete }) {
             {post.author?.avatar_url ? (
               <img src={post.author.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
             ) : (
-              post.author?.full_name?.[0] || 'U'
+              post.author?.full_name?.[0] || post.author?.username?.[0] || 'U'
             )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <p className="font-light text-white truncate text-sm">
-                {post.author?.full_name || 'Unknown'}
+                {post.author?.full_name || post.author?.username || 'Unknown'}
               </p>
-              {post.author?.user_type === 'advisor' && post.author?.is_verified && (
+              {post.author?.is_verified && (
                 <span className="text-white flex-shrink-0 text-xs">✓</span>
               )}
               <span className="text-gray-600 text-xs">·</span>
               <span className="text-gray-600 text-xs flex-shrink-0">{formatDate(post.created_at)}</span>
             </div>
-            <div className="text-xs text-gray-600 font-light truncate">@{post.author?.username}</div>
+            <div className="text-xs text-gray-600 font-light truncate">
+              @{post.author?.username || 'user'}
+            </div>
           </div>
         </div>
 
@@ -193,7 +224,8 @@ export default function PostCard({ post, onDelete }) {
       <div className="flex items-center gap-1 text-gray-600 pt-1.5">
         <button
           onClick={handleLike}
-          className="flex items-center gap-1.5 hover:text-white transition-colors active:scale-95 px-2 py-1.5 -ml-2 rounded-full hover:bg-gray-950"
+          disabled={loading}
+          className="flex items-center gap-1.5 hover:text-white transition-colors active:scale-95 px-2 py-1.5 -ml-2 rounded-full hover:bg-gray-950 disabled:opacity-50"
         >
           <Heart className={`w-[18px] h-[18px] ${liked ? 'fill-red-500 text-red-500' : ''}`} strokeWidth={1.5} />
           <span className="text-sm font-light">{likesCount || 0}</span>

@@ -15,7 +15,7 @@ export default function SignUp() {
     email: '',
     password: '',
     fullName: '',
-    userType: '', // 'investor' or 'advisor' or 'learner'
+    username: ''
   })
 
   const handleChange = (e) => {
@@ -28,8 +28,8 @@ export default function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!formData.email || !formData.password || !formData.fullName || !formData.userType) {
-      toast.error('Please fill all fields')
+    if (!formData.email || !formData.password || !formData.fullName) {
+      toast.error('Please fill all required fields')
       return
     }
 
@@ -37,6 +37,9 @@ export default function SignUp() {
       toast.error('Password must be at least 6 characters')
       return
     }
+
+    // Generate username from email if not provided
+    const username = formData.username || formData.email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_')
 
     setLoading(true)
 
@@ -46,16 +49,12 @@ export default function SignUp() {
         formData.password,
         {
           full_name: formData.fullName,
-          user_type: formData.userType
+          username: username
         }
       )
       
       if (!error) {
-        if (formData.userType === 'advisor') {
-          navigate('/auth/advisor-verification')
-        } else {
-          navigate('/')
-        }
+        navigate('/')
       }
     } catch (error) {
       toast.error(error.message)
@@ -80,7 +79,7 @@ export default function SignUp() {
         <div className="mb-12">
           <h1 className="text-4xl font-light mb-3 tracking-tight">Create account</h1>
           <p className="text-sm text-gray-600 font-light">
-            Join the platform for verified financial advice
+            Join the trading community platform
           </p>
         </div>
 
@@ -114,6 +113,23 @@ export default function SignUp() {
             />
           </div>
 
+          {/* Username (optional) */}
+          <div>
+            <input
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              placeholder="Username (optional)"
+              className="input-underline"
+              disabled={loading}
+              autoComplete="username"
+            />
+            <p className="mt-2 text-xs text-gray-600">
+              If not provided, we'll generate one from your email
+            </p>
+          </div>
+
           {/* Password */}
           <div className="relative">
             <input
@@ -137,49 +153,6 @@ export default function SignUp() {
                 <Eye className="w-5 h-5" strokeWidth={1.5} />
               )}
             </button>
-          </div>
-
-          {/* User Type - Premium selection */}
-          <div>
-            <label className="block text-sm text-gray-600 mb-4 font-light">I'm an...</label>
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, userType: 'investor' }))}
-                disabled={loading}
-                className={`py-3 px-4 border transition-all duration-200 text-sm font-medium active:scale-[0.98] ${
-                  formData.userType === 'investor'
-                    ? 'border-white bg-white text-black'
-                    : 'border-gray-900 hover:border-gray-800 text-white'
-                }`}
-              >
-                Investor
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, userType: 'advisor' }))}
-                disabled={loading}
-                className={`py-3 px-4 border transition-all duration-200 text-sm font-medium active:scale-[0.98] ${
-                  formData.userType === 'advisor'
-                    ? 'border-white bg-white text-black'
-                    : 'border-gray-900 hover:border-gray-800 text-white'
-                }`}
-              >
-                Advisor
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, userType: 'learner' }))}
-                disabled={loading}
-                className={`py-3 px-4 border transition-all duration-200 text-sm font-medium active:scale-[0.98] ${
-                  formData.userType === 'learner'
-                    ? 'border-white bg-white text-black'
-                    : 'border-gray-900 hover:border-gray-800 text-white'
-                }`}
-              >
-                Learner
-              </button>
-            </div>
           </div>
 
           {/* Submit Button */}

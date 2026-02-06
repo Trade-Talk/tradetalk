@@ -180,10 +180,13 @@ export function AuthProvider({ children }) {
         return { data: { user: mockUser }, error: null }
       }
 
+      // Use consistent callback URL for both local dev and Vercel production
+      const callbackUrl = `${window.location.origin}/auth/callback`
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo: callbackUrl
         }
       })
       if (error) throw error
@@ -212,10 +215,13 @@ export function AuthProvider({ children }) {
         return { data: { user: mockUser }, error: null }
       }
 
+      // Use consistent callback URL for both local dev and Vercel production
+      const callbackUrl = `${window.location.origin}/auth/callback`
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'apple',
         options: {
-          redirectTo: `${window.location.origin}/`
+          redirectTo: callbackUrl
         }
       })
       if (error) throw error

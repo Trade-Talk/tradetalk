@@ -1,0 +1,44 @@
+# ⚡ 3-STEP FIX - NO MORE ERRORS
+
+## The Problem
+You have an existing communities table with a NOT NULL constraint on slug.
+
+## The Solution
+Run these 3 files in Supabase SQL Editor in order:
+
+---
+
+### 1️⃣ Fix Communities Table
+```
+File: /supabase/fix_communities.sql
+```
+This removes the NOT NULL constraint
+
+---
+
+### 2️⃣ Run Main Migration
+```
+File: /supabase/add_categories_migration.sql
+```
+This adds categories, post types, etc.
+
+---
+
+### 3️⃣ Add Seed Data
+```
+File: /supabase/seed_data_easy.sql
+```
+This creates 29 real posts
+
+---
+
+## ✅ Done!
+
+Now deploy:
+```bash
+npm run build && npm run preview
+git add . && git commit -m "ready" && git push
+vercel
+```
+
+**No more errors!** 🎉

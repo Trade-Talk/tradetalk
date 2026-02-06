@@ -6,7 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-k
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // ==========================================
-// AUTH HELPERS - Simplified for MVP
+// AUTH HELPERS - With Google OAuth
 // ==========================================
 
 export const authHelpers = {
@@ -40,8 +40,7 @@ export const authHelpers = {
               id: data.user.id,
               email,
               full_name: metadata.full_name || 'User',
-              username: metadata.username || `user_${data.user.id.substring(0, 8)}`,
-              user_type: metadata.user_type || 'investor'
+              username: metadata.username || `user_${data.user.id.substring(0, 8)}`
             })
         }
       }
@@ -57,6 +56,23 @@ export const authHelpers = {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
+    })
+    return { data, error }
+  },
+
+  async signInWithGoogle() {
+    // Get the correct callback URL for both local dev and Vercel production
+    const callbackUrl = `${window.location.origin}/auth/callback`
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: callbackUrl,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        }
+      }
     })
     return { data, error }
   },
@@ -126,7 +142,7 @@ export const db = {
       .from('posts')
       .select(`
         *,
-        author:profiles(id, username, full_name, avatar_url, user_type, is_verified),
+        author:profiles(id, username, full_name, avatar_url, is_verified),
         likes:post_likes(count),
         comments:comments(count)
       `)

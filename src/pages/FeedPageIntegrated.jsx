@@ -8,6 +8,8 @@ import { db } from '../lib/supabase'
 import PostCard from '../components/posts/PostCard'
 import toast from 'react-hot-toast'
 
+const categories = ['All', 'Crypto', 'Stocks', 'Options', 'Futures', 'Forex', 'Commodities', 'ETFs']
+
 export default function FeedPageIntegrated() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -18,6 +20,7 @@ export default function FeedPageIntegrated() {
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState('All')
 
   // Mock stock database for search
   const stockDatabase = [
@@ -99,6 +102,11 @@ export default function FeedPageIntegrated() {
     setAllPosts(allPosts.filter(p => p.id !== postId))
   }
 
+  // Filter posts by category
+  const filteredPosts = selectedCategory === 'All' 
+    ? allPosts 
+    : allPosts.filter(post => post.category === selectedCategory)
+
   const handleStockClick = (symbol) => {
     setShowSearch(false)
     setSearchQuery('')
@@ -145,6 +153,25 @@ export default function FeedPageIntegrated() {
           </button>
         </div>
       </header>
+
+      {/* Category Tabs */}
+      <div className="border-b border-gray-900 px-4 overflow-x-auto hide-scrollbar sticky top-[61px] z-10 bg-black">
+        <div className="flex gap-2 py-3">
+          {categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              className={`px-4 py-1.5 rounded-full text-xs font-light whitespace-nowrap transition-all ${
+                selectedCategory === category
+                  ? 'bg-white text-black'
+                  : 'bg-gray-950 text-gray-400 hover:bg-gray-900'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Ticker Search Modal */}
       {showSearch && (
@@ -217,7 +244,7 @@ export default function FeedPageIntegrated() {
 
       {/* Feed */}
       <div className="flex-1 overflow-y-auto pb-20">
-        {allPosts.length === 0 ? (
+        {filteredPosts.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center px-6 text-center">
             <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center mb-5">
               <TrendingUp className="w-8 h-8 text-gray-600" strokeWidth={1.5} />
@@ -237,7 +264,7 @@ export default function FeedPageIntegrated() {
           </div>
         ) : (
           <div className="divide-y divide-gray-900">
-            {allPosts.map((post) => (
+            {filteredPosts.map((post) => (
               <div 
                 key={post.id} 
                 className="px-6 py-5 hover:bg-gray-950/30 transition-colors"

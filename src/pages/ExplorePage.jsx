@@ -1,160 +1,9 @@
-import { useState } from 'react'
-import { Search, Users, MessageSquare, Sparkles } from 'lucide-react'
-import { Link } from 'react-router-dom'
-
-// Mock discussions with realistic content
-const discussions = [
-  {
-    id: 1,
-    title: 'How to invest from scratch as a beginner? Share your experience!',
-    author: 'Priya Sharma',
-    authorUsername: '@priyalearns',
-    timeAgo: '2h',
-    replies: 48,
-    likes: 127,
-    preview: 'Started with ₹10k in 2023. My biggest mistake was not researching enough before buying...',
-    hot: true,
-    category: 'Learning'
-  },
-  {
-    id: 2,
-    title: 'PSU stocks or private sector - which is better for long term?',
-    author: 'Rajesh Kumar',
-    authorUsername: '@rajeshvalue',
-    timeAgo: '5h',
-    replies: 89,
-    likes: 234,
-    preview: 'Been tracking both for 3 years now. Here are my observations on valuations, growth...',
-    category: 'Discussion'
-  },
-  {
-    id: 3,
-    title: 'Weekly options strategy that actually works - my 6 month journey',
-    author: 'Amit Trader',
-    authorUsername: '@amitfotrader',
-    timeAgo: '1d',
-    replies: 156,
-    likes: 445,
-    preview: 'Lost money for 4 months straight until I figured out this risk management system...',
-    hot: true,
-    category: 'Strategy'
-  },
-  {
-    id: 4,
-    title: 'How do you deal with FOMO when stocks keep going up?',
-    author: 'Neha Patel',
-    authorUsername: '@nehalearning',
-    timeAgo: '3h',
-    replies: 67,
-    likes: 189,
-    preview: 'Missed Nifty rally from 21k to 27k because I kept waiting for correction. Now what?',
-    category: 'Question'
-  },
-  {
-    id: 5,
-    title: 'Best resources to learn technical analysis from zero',
-    author: 'Vikram Singh',
-    authorUsername: '@vikramcharts',
-    timeAgo: '6h',
-    replies: 93,
-    likes: 298,
-    preview: 'Spent 1 year learning TA. Here are free resources that actually helped me...',
-    category: 'Learning'
-  },
-  {
-    id: 6,
-    title: 'Mid-cap vs large-cap allocation - what works for you?',
-    author: 'Kavita Reddy',
-    authorUsername: '@kavitainvests',
-    timeAgo: '8h',
-    replies: 72,
-    likes: 167,
-    preview: '60-40 allocation strategy I follow and why it suits my risk profile...',
-    category: 'Discussion'
-  }
-]
-
-// Active debates
-const activeDebates = [
-  {
-    id: 1,
-    question: 'Will Nifty hit 27000 before a 10% correction?',
-    bullish: 1247,
-    bearish: 892,
-    participants: 156,
-    endsIn: '2d',
-    hot: true
-  },
-  {
-    id: 2,
-    question: 'Are PSU banks better than private banks in 2024?',
-    for: 678,
-    against: 543,
-    participants: 89,
-    endsIn: '5d'
-  },
-  {
-    id: 3,
-    question: 'Will small caps outperform large caps this quarter?',
-    bullish: 445,
-    bearish: 567,
-    participants: 67,
-    endsIn: '3d'
-  }
-]
-
-// Featured community members
-const featuredUsers = [
-  {
-    id: 1,
-    name: 'Rajesh Kumar',
-    username: '@rajeshkumar',
-    role: 'Value Investor',
-    followers: 1234,
-    verified: true,
-    badge: '📈 Top Contributor',
-    bio: 'Finding undervalued gems. 5+ years experience.'
-  },
-  {
-    id: 2,
-    name: 'Priya Sharma',
-    username: '@priyasharma',
-    role: 'Day Trader',
-    followers: 892,
-    verified: true,
-    badge: '⚡ Quick Calls',
-    bio: 'Scalping & intraday. Technical analysis expert.'
-  },
-  {
-    id: 3,
-    name: 'Amit Desai',
-    username: '@amittrader',
-    role: 'F&O Specialist',
-    followers: 2156,
-    verified: true,
-    badge: '🎯 Options Pro',
-    bio: 'Weekly options strategies. Risk management focus.'
-  },
-  {
-    id: 4,
-    name: 'Neha Patel',
-    username: '@nehalearns',
-    role: 'Student',
-    followers: 234,
-    badge: '📚 Learning',
-    bio: 'MBA student sharing my market learning journey!'
-  }
-]
-
-// Communities to join
-const communities = [
-  { id: 1, name: 'Options Gang', members: 15234, icon: '🎲', description: 'F&O traders & strategies' },
-  { id: 2, name: 'Value Hunters', members: 8956, icon: '💎', description: 'Long-term value investing' },
-  { id: 3, name: 'Day Traders Hub', members: 12456, icon: '⚡', description: 'Intraday & scalping' },
-  { id: 4, name: 'Market Newbies', members: 23456, icon: '🌱', description: 'Learning together' },
-  { id: 5, name: 'Swing Traders', members: 6789, icon: '📊', description: 'Multi-day positions' },
-  { id: 6, name: 'Short Sellers', members: 4523, icon: '🐻', description: 'Bearish plays & analysis' }
-]
+import { useState, useEffect } from 'react'
+import { Search, Users, MessageSquare, Sparkles, Loader, Plus, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { db } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 const tabs = [
   { id: 'discussions', label: 'Discussions', icon: MessageSquare },
@@ -164,21 +13,151 @@ const tabs = [
 ]
 
 export default function ExplorePage() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('discussions')
+  const [loading, setLoading] = useState(false)
+
+  // Tab-specific data
+  const [discussions, setDiscussions] = useState([])
+  const [debates, setDebates] = useState([])
+  const [realUsers, setRealUsers] = useState([])
+  const [communities, setCommunities] = useState([])
+  const [joinedCommunities, setJoinedCommunities] = useState(new Set())
+
+  // Load data based on active tab
+  useEffect(() => {
+    loadTabData()
+  }, [activeTab, user])
+
+  const loadTabData = async () => {
+    if (!user) return
+
+    setLoading(true)
+    try {
+      switch (activeTab) {
+        case 'discussions':
+          const { data: discussionData, error: discussionError } = await db.getDiscussions(20, 0)
+          if (discussionError) throw discussionError
+          setDiscussions(discussionData || [])
+          break
+
+        case 'debates':
+          const { data: debateData, error: debateError } = await db.getDebates(20, 0)
+          if (debateError) throw debateError
+          setDebates(debateData || [])
+          break
+
+        case 'people':
+          const { data: userData, error: userError } = await db.getSuggestedUsers(user.id, 20)
+          if (userError) throw userError
+          setRealUsers(userData || [])
+          break
+
+        case 'communities':
+          const { data: communityData, error: communityError } = await db.getCommunities(50)
+          if (communityError) throw communityError
+          setCommunities(communityData || [])
+          
+          // Check which communities user has joined
+          const joined = new Set()
+          for (const community of communityData || []) {
+            const { data: isMember } = await db.checkIfJoinedCommunity(user.id, community.id)
+            if (isMember) joined.add(community.id)
+          }
+          setJoinedCommunities(joined)
+          break
+      }
+    } catch (error) {
+      console.error('Error loading tab data:', error)
+      toast.error('Failed to load data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFollow = async (e, userId) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try {
+      const { error } = await db.followUser(user.id, userId)
+      if (error) throw error
+      
+      toast.success('Following user!')
+      setRealUsers(realUsers.filter(u => u.id !== userId))
+    } catch (error) {
+      console.error('Error following user:', error)
+      toast.error('Failed to follow user')
+    }
+  }
+
+  const handleJoinCommunity = async (e, communityId) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    try {
+      if (joinedCommunities.has(communityId)) {
+        const { error } = await db.leaveCommunity(user.id, communityId)
+        if (error) throw error
+        
+        setJoinedCommunities(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(communityId)
+          return newSet
+        })
+        
+        setCommunities(communities.map(c => 
+          c.id === communityId ? { ...c, member_count: Math.max(0, c.member_count - 1) } : c
+        ))
+        
+        toast.success('Left community')
+      } else {
+        const { error } = await db.joinCommunity(user.id, communityId)
+        if (error) throw error
+        
+        setJoinedCommunities(prev => new Set([...prev, communityId]))
+        setCommunities(communities.map(c => 
+          c.id === communityId ? { ...c, member_count: c.member_count + 1 } : c
+        ))
+        
+        toast.success('Joined community!')
+      }
+    } catch (error) {
+      console.error('Error with community:', error)
+      toast.error('Failed to update community membership')
+    }
+  }
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diff = now - date
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+
+    if (minutes < 60) return `${minutes}m`
+    if (hours < 24) return `${hours}h`
+    if (days < 7) return `${days}d`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
 
   return (
     <div className="min-h-screen bg-black text-white pb-20">
       {/* Header with Search */}
       <header className="border-b border-gray-950 sticky top-0 z-10 backdrop-blur-xl bg-black/80">
         <div className="px-6 py-5">
-          <h1 className="text-base font-light mb-4 tracking-tight">Explore</h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-base font-light tracking-tight">Explore</h1>
+          </div>
           
           <div className="relative">
             <Search className="absolute left-0 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-600" strokeWidth={1.5} />
             <input
               type="text"
-              placeholder="Search discussions, people..."
+              placeholder={`Search ${activeTab}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-8 pr-4 py-3 bg-transparent border-0 border-b border-gray-900 text-white placeholder-gray-600 focus:border-white outline-none transition-colors duration-200 text-sm font-light"
@@ -195,9 +174,7 @@ export default function ExplorePage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 text-sm font-light whitespace-nowrap transition-colors duration-200 pb-1 relative ${
-                  activeTab === tab.id
-                    ? 'text-white'
-                    : 'text-gray-600 hover:text-gray-400'
+                  activeTab === tab.id ? 'text-white' : 'text-gray-600 hover:text-gray-400'
                 }`}
               >
                 <Icon className="w-4 h-4" strokeWidth={1.5} />
@@ -211,196 +188,257 @@ export default function ExplorePage() {
         </div>
       </header>
 
-      {/* Discussions Tab */}
-      {activeTab === 'discussions' && (
-        <div className="px-6 py-6">
-          <div className="mb-6">
-            <h2 className="text-sm font-light text-gray-400 mb-2">Active Discussions</h2>
-            <p className="text-xs text-gray-500 font-light">Join conversations and share your trading journey</p>
-          </div>
-          <div className="space-y-4">
-            {discussions.map((discussion) => (
-              <Link
-                key={discussion.id}
-                to={`/discussion/${discussion.id}`}
-                className="block p-4 border border-gray-900 hover:border-gray-800 transition-all rounded"
-              >
-                <div className="mb-3">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="text-white text-sm font-light leading-relaxed flex-1">
-                      {discussion.title}
-                    </h3>
-                    {discussion.hot && (
-                      <span className="text-xs px-2 py-0.5 bg-orange-500/10 text-orange-500 border border-orange-500/20 flex-shrink-0 font-light">
-                        HOT
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 font-light leading-relaxed line-clamp-2">
-                    {discussion.preview}
-                  </p>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span className="font-light">{discussion.author}</span>
-                    <span>·</span>
-                    <span className="font-light">{discussion.timeAgo}</span>
-                    <span className="px-2 py-0.5 bg-gray-900 text-gray-400 font-light">
-                      {discussion.category}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span className="font-light">💬 {discussion.replies}</span>
-                    <span className="font-light">❤️ {discussion.likes}</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-          
-          <Link
-            to="/create-discussion"
-            className="block mt-6 py-4 border border-gray-900 text-white text-sm font-medium text-center hover:bg-gray-950 hover:border-gray-800 transition-all duration-200 active:scale-[0.98] rounded"
-          >
-            Start a Discussion
-          </Link>
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader className="w-6 h-6 text-white animate-spin" strokeWidth={1.5} />
         </div>
-      )}
-
-      {/* Debates Tab */}
-      {activeTab === 'debates' && (
-        <div className="px-6 py-6">
-          <div className="mb-6">
-            <h2 className="text-sm font-light text-gray-400 mb-2">Active Debates</h2>
-            <p className="text-xs text-gray-500 font-light">Vote on trending market debates</p>
-          </div>
-          <div className="space-y-4">
-            {activeDebates.map((debate) => (
-              <Link
-                key={debate.id}
-                to={`/debate/${debate.id}`}
-                className="block p-4 border border-gray-900 hover:border-gray-800 transition-all rounded"
-              >
-                <div className="mb-4">
-                  <p className="text-white text-sm font-light leading-relaxed">{debate.question}</p>
+      ) : (
+        <>
+          {/* Discussions Tab */}
+          {activeTab === 'discussions' && (
+            <div className="px-6 py-6">
+              {discussions.length > 0 ? (
+                <div className="space-y-4">
+                  {discussions.map((discussion) => (
+                    <Link
+                      key={discussion.id}
+                      to={`/post/${discussion.id}`}
+                      className="block border border-gray-900 rounded-lg p-4 hover:border-gray-800 transition-colors"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-gray-800 to-black rounded-full flex items-center justify-center flex-shrink-0">
+                          {discussion.author?.avatar_url ? (
+                            <img src={discussion.author.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            <span className="text-white font-light text-xs">
+                              {discussion.author?.full_name?.[0] || '?'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-light text-white text-sm">
+                              {discussion.author?.full_name || 'Anonymous'}
+                            </span>
+                            <span className="text-gray-600 text-xs">·</span>
+                            <span className="text-gray-600 text-xs">{formatDate(discussion.created_at)}</span>
+                          </div>
+                          {discussion.discussion_topic && (
+                            <h3 className="font-light text-white text-base mb-2">{discussion.discussion_topic}</h3>
+                          )}
+                          <p className="text-sm text-gray-400 font-light line-clamp-2">{discussion.content}</p>
+                          {discussion.tags && discussion.tags.length > 0 && (
+                            <div className="flex gap-2 mt-2">
+                              {discussion.tags.map((tag, i) => (
+                                <span key={i} className="text-xs text-gray-500 font-light">#{tag}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-gray-600 font-light">
+                        <span>{discussion.comments_count || 0} replies</span>
+                        <span>{discussion.likes_count || 0} likes</span>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-                
-                {/* Vote bars */}
-                <div className="space-y-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-900 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-green-500 transition-all duration-300"
-                        style={{ width: `${((debate.bullish || debate.for) / ((debate.bullish || debate.for) + (debate.bearish || debate.against))) * 100}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-green-500 text-xs font-light w-12 text-right">{debate.bullish || debate.for}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-900 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-red-500 transition-all duration-300"
-                        style={{ width: `${((debate.bearish || debate.against) / ((debate.bullish || debate.for) + (debate.bearish || debate.against))) * 100}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-red-500 text-xs font-light w-12 text-right">{debate.bearish || debate.against}</span>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span className="font-light">{debate.participants} participating</span>
-                  <span className="font-light">Ends in {debate.endsIn}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-          
-          <Link
-            to="/create-debate"
-            className="block mt-6 py-4 border border-gray-900 text-white text-sm font-medium text-center hover:bg-gray-950 hover:border-gray-800 transition-all duration-200 active:scale-[0.98] rounded"
-          >
-            Start a Debate
-          </Link>
-        </div>
-      )}
-
-      {/* People Tab */}
-      {activeTab === 'people' && (
-        <div className="px-6 py-6">
-          <div className="mb-6">
-            <h2 className="text-sm font-light text-gray-400 mb-2">Find People</h2>
-            <p className="text-xs text-gray-500 font-light">Connect with traders, investors, and learners</p>
-          </div>
-          <div className="space-y-4">
-            {featuredUsers.map((user) => (
-              <Link
-                key={user.id}
-                to={`/profile/${user.id}`}
-                className="block hover:bg-gray-950/50 transition-colors -mx-2 px-2 py-3 rounded"
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-gray-800 to-black rounded-full flex items-center justify-center flex-shrink-0 border border-gray-900">
-                    <span className="text-white font-light text-sm">
-                      {user.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-light text-white text-sm">{user.name}</span>
-                      {user.verified && <span className="text-white text-xs">✓</span>}
-                    </div>
-                    <p className="text-xs text-gray-500 font-light">{user.username} • {user.role}</p>
-                    {user.badge && (
-                      <span className="inline-block mt-1 text-xs text-gray-400 font-light">{user.badge}</span>
-                    )}
-                  </div>
-                  <button className="px-3 py-1 border border-gray-900 text-gray-400 text-xs font-light hover:text-white hover:border-gray-800 transition-all flex-shrink-0">
-                    Follow
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 text-sm font-light mb-4">No discussions yet</p>
+                  <button
+                    onClick={() => navigate('/create-post')}
+                    className="inline-block px-4 py-2 bg-white text-black text-xs font-light rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    Start a Discussion
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 font-light leading-relaxed ml-15">{user.bio}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
+              )}
+            </div>
+          )}
+
+          {/* Debates Tab */}
+          {activeTab === 'debates' && (
+            <div className="px-6 py-6">
+              {debates.length > 0 ? (
+                <div className="space-y-4">
+                  {debates.map((debate) => {
+                    const totalVotes = (debate.votes_for || 0) + (debate.votes_against || 0)
+                    const forPercent = totalVotes > 0 ? Math.round((debate.votes_for / totalVotes) * 100) : 50
+                    const againstPercent = 100 - forPercent
+
+                    return (
+                      <Link
+                        key={debate.id}
+                        to={`/post/${debate.id}`}
+                        className="block border border-gray-900 rounded-lg p-4 hover:border-gray-800 transition-colors"
+                      >
+                        <div className="mb-3">
+                          <h3 className="font-light text-white text-base mb-3">{debate.content}</h3>
+                          
+                          {debate.debate_sides && (
+                            <div className="space-y-2 mb-3">
+                              <div className="bg-green-900/10 border border-green-900/30 rounded p-2">
+                                <p className="text-xs text-green-400 font-light mb-1">👍 FOR</p>
+                                <p className="text-xs text-gray-400 font-light">{debate.debate_sides.for}</p>
+                              </div>
+                              <div className="bg-red-900/10 border border-red-900/30 rounded p-2">
+                                <p className="text-xs text-red-400 font-light mb-1">👎 AGAINST</p>
+                                <p className="text-xs text-gray-400 font-light">{debate.debate_sides.against}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2 h-2 rounded-full overflow-hidden bg-gray-950">
+                            <div 
+                              className="bg-green-500/80 transition-all duration-300" 
+                              style={{ width: `${forPercent}%` }}
+                            />
+                            <div 
+                              className="bg-red-500/80 transition-all duration-300" 
+                              style={{ width: `${againstPercent}%` }}
+                            />
+                          </div>
+                          
+                          <div className="flex justify-between mt-2 text-xs font-light">
+                            <span className="text-green-400">{forPercent}% FOR ({debate.votes_for || 0})</span>
+                            <span className="text-red-400">{againstPercent}% AGAINST ({debate.votes_against || 0})</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs text-gray-600 font-light">
+                          <span>{totalVotes} votes</span>
+                          <span>{formatDate(debate.created_at)}</span>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 text-sm font-light mb-4">No debates yet</p>
+                  <button
+                    onClick={() => navigate('/create-post')}
+                    className="inline-block px-4 py-2 bg-white text-black text-xs font-light rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    Create a Debate
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* People Tab */}
+          {activeTab === 'people' && (
+            <div className="px-6 py-6">
+              {realUsers.length > 0 ? (
+                <div className="space-y-4">
+                  {realUsers.map((user) => (
+                    <Link
+                      key={user.id}
+                      to={`/profile/${user.id}`}
+                      className="block hover:bg-gray-950/50 transition-colors -mx-2 px-2 py-3 rounded"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-gray-800 to-black rounded-full flex items-center justify-center flex-shrink-0 border border-gray-900">
+                          {user.avatar_url ? (
+                            <img src={user.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            <span className="text-white font-light text-sm">
+                              {user.full_name?.[0] || user.username?.[0] || '?'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-light text-white text-sm">
+                              {user.full_name || user.username}
+                            </span>
+                            {user.is_verified && <span className="text-white text-xs">✓</span>}
+                          </div>
+                          <p className="text-xs text-gray-500 font-light">@{user.username}</p>
+                          {user.bio && (
+                            <p className="text-xs text-gray-500 font-light mt-2 line-clamp-2">{user.bio}</p>
+                          )}
+                        </div>
+                        <button 
+                          onClick={(e) => handleFollow(e, user.id)}
+                          className="px-3 py-1 border border-gray-900 text-gray-400 text-xs font-light hover:text-white hover:border-gray-800 transition-all flex-shrink-0"
+                        >
+                          Follow
+                        </button>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 text-sm font-light mb-4">No suggested users</p>
+                  <Link
+                    to="/add-friends"
+                    className="inline-block px-4 py-2 border border-gray-900 text-white text-xs font-light hover:bg-gray-950 hover:border-gray-800 transition-all"
+                  >
+                    Find Friends
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Communities Tab */}
+          {activeTab === 'communities' && (
+            <div className="px-6 py-6">
+              {communities.length > 0 ? (
+                <div className="grid gap-4">
+                  {communities.map((community) => (
+                    <div
+                      key={community.id}
+                      className="border border-gray-900 rounded-lg p-4 hover:border-gray-800 transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="text-3xl">{community.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-light text-white text-base mb-1">{community.name}</h3>
+                          <p className="text-xs text-gray-500 font-light mb-2">{community.description}</p>
+                          <p className="text-xs text-gray-600 font-light">
+                            {community.member_count} {community.member_count === 1 ? 'member' : 'members'}
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => handleJoinCommunity(e, community.id)}
+                          className={`px-3 py-1 text-xs font-light transition-all flex-shrink-0 ${
+                            joinedCommunities.has(community.id)
+                              ? 'bg-gray-900 text-gray-400 hover:bg-gray-800'
+                              : 'border border-gray-900 text-white hover:bg-gray-950'
+                          }`}
+                        >
+                          {joinedCommunities.has(community.id) ? 'Joined' : 'Join'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 text-sm font-light">No communities available</p>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Communities Tab */}
-      {activeTab === 'communities' && (
-        <div className="px-6 py-6">
-          <div className="mb-6">
-            <h2 className="text-sm font-light text-gray-400 mb-2">Communities</h2>
-            <p className="text-xs text-gray-500 font-light">Find your tribe based on trading style</p>
-          </div>
-          <div className="space-y-3">
-            {communities.map((community) => (
-              <Link
-                key={community.id}
-                to={`/community/${community.id}`}
-                className="block p-4 border border-gray-900 hover:border-gray-800 transition-all rounded"
-              >
-                <div className="flex items-start gap-3 mb-2">
-                  <div className="w-12 h-12 bg-gray-900 rounded-full flex items-center justify-center text-2xl flex-shrink-0">
-                    {community.icon}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-white text-sm font-light">{community.name}</h3>
-                      <button className="px-3 py-1 border border-gray-900 text-gray-400 text-xs font-light hover:text-white hover:border-gray-800 transition-all flex-shrink-0">
-                        Join
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 font-light">{community.description}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                      <span className="font-light">{community.members.toLocaleString()} members</span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+      {/* FAB - Context Aware */}
+      {(activeTab === 'discussions' || activeTab === 'debates') && (
+        <button
+          onClick={() => navigate('/create-post', { 
+            state: { postType: activeTab === 'discussions' ? 'discussion' : 'debate' } 
+          })}
+          className="fixed bottom-20 right-6 w-14 h-14 bg-white text-black rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center z-20"
+          aria-label={`Create ${activeTab === 'discussions' ? 'Discussion' : 'Debate'}`}
+        >
+          <Plus className="w-6 h-6" strokeWidth={2.5} />
+        </button>
       )}
     </div>
   )

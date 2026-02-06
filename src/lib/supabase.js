@@ -18,7 +18,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Auth helpers
 export const authHelpers = {
-  // Sign up with email/password
+  // Sign up with email/password - SIMPLIFIED (no user types)
   async signUp(email, password, metadata) {
     try {
       // First, sign up the user
@@ -33,7 +33,7 @@ export const authHelpers = {
       
       if (error) throw error
 
-      // If signup succeeded but profile creation failed, create it manually
+      // If signup succeeded, ensure profile is created with correct username
       if (data.user && data.user.id) {
         // Wait a moment for trigger to execute
         await new Promise(resolve => setTimeout(resolve, 1000))
@@ -41,45 +41,48 @@ export const authHelpers = {
         // Check if profile exists
         const { data: existingProfile, error: profileError } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, username')
           .eq('id', data.user.id)
           .single()
         
-        // If no profile exists, create it manually
+        // IMPORTANT: Use the username from metadata, not auto-generated
+        const desiredUsername = metadata.username || `user_${data.user.id.substring(0, 8)}`
+        
         if (profileError && profileError.code === 'PGRST116') {
-          console.log('⚠️ Trigger failed, creating profile manually...')
-          console.log('Creating profile with user_type:', metadata.user_type)
+          // Profile doesn't exist, create it
+          console.log('Creating profile with username:', desiredUsername)
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
               id: data.user.id,
               email: email,
               full_name: metadata.full_name || 'User',
-              username: metadata.username || `user_${data.user.id.substring(0, 8)}`,
-              user_type: metadata.user_type || 'investor',
+              username: desiredUsername,
               is_verified: false
             })
           
           if (insertError) {
-            console.error('Failed to create profile manually:', insertError)
+            console.error('Failed to create profile:', insertError)
           } else {
-            console.log('✅ Profile created manually with user_type:', metadata.user_type)
+            console.log('✅ Profile created with username:', desiredUsername)
           }
         } else if (existingProfile) {
-          // Profile exists but might have wrong user_type from trigger
-          console.log('Profile exists, updating user_type to:', metadata.user_type)
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({
-              user_type: metadata.user_type,
-              full_name: metadata.full_name || 'User'
-            })
-            .eq('id', data.user.id)
-          
-          if (updateError) {
-            console.error('Failed to update profile user_type:', updateError)
-          } else {
-            console.log('✅ Profile user_type updated to:', metadata.user_type)
+          // Profile exists but might have wrong username from trigger
+          if (existingProfile.username !== desiredUsername) {
+            console.log('Updating profile username from', existingProfile.username, 'to', desiredUsername)
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                username: desiredUsername,
+                full_name: metadata.full_name || 'User'
+              })
+              .eq('id', data.user.id)
+            
+            if (updateError) {
+              console.error('Failed to update profile username:', updateError)
+            } else {
+              console.log('✅ Profile username updated to:', desiredUsername)
+            }
           }
         }
       }
@@ -89,6 +92,24 @@ export const authHelpers = {
       console.error('Signup error:', error)
       return { data: null, error }
     }
+  },
+
+  // Sign in with Google
+  async signInWithGoogle() {
+    // Use consistent callback URL for both local dev and Vercel production
+    const callbackUrl = `${window.location.origin}/auth/callback`
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: callbackUrl,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    })
+    return { data, error }
   },
 
   // Sign in with email/password
@@ -168,44 +189,74 @@ export const db = {
     return { data, error }
   },
 
+  // Search users by username or full name
   async searchUsers(query) {
+    if (!query || query.trim().length === 0) {
+      return { data: [], error: null }
+    }
+
+    const searchTerm = query.trim().toLowerCase()
+    
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+      .or(`username.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%`)
       .limit(20)
-    return { data, error }
+    
+    return { data: data || [], error }
   },
 
+  // Search users by phone
   async searchUsersByPhone(phone) {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('phone', phone)
-      .eq('phone_searchable', true)
+      .eq('phone_searchable', true) // Only show users who opted in
       .limit(10)
-    return { data, error }
+    return { data: data || [], error }
   },
 
+  // Get suggested users
   async getSuggestedUsers(currentUserId, limit = 10) {
-    // Get users the current user is NOT following
-    // Prioritize: verified advisors, popular users, new users
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*, follower_count:follows!follows_following_id_fkey(count)')
-      .neq('id', currentUserId)
-      .limit(limit)
-    
-    if (error) return { data: [], error }
-    
-    // Sort by: verified advisors first, then by follower count
-    const sorted = (data || []).sort((a, b) => {
-      if (a.is_verified && !b.is_verified) return -1
-      if (!a.is_verified && b.is_verified) return 1
-      return (b.follower_count || 0) - (a.follower_count || 0)
-    })
-    
-    return { data: sorted, error: null }
+    try {
+      // Get users the current user is NOT following
+      const { data: followingIds } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', currentUserId)
+      
+      const followingIdList = followingIds?.map(f => f.following_id) || []
+      
+      // Get suggested users (exclude self and already following)
+      let query = supabase
+        .from('profiles')
+        .select('*')
+        .neq('id', currentUserId)
+      
+      if (followingIdList.length > 0) {
+        query = query.not('id', 'in', `(${followingIdList.join(',')})`)
+      }
+      
+      const { data, error } = await query.limit(limit * 2) // Get more to sort
+      
+      if (error) return { data: [], error }
+      
+      // Sort by: verified users first, then by created date (newer users)
+      const sorted = (data || []).sort((a, b) => {
+        // Verified users come first
+        if (a.is_verified && !b.is_verified) return -1
+        if (!a.is_verified && b.is_verified) return 1
+        
+        // Then by newest users
+        return new Date(b.created_at) - new Date(a.created_at)
+      }).slice(0, limit)
+      
+      return { data: sorted, error: null }
+    } catch (error) {
+      console.error('Error getting suggested users:', error)
+      return { data: [], error }
+    }
   },
 
   // ==================== POSTS ====================
@@ -285,14 +336,18 @@ export const db = {
     return { error }
   },
 
+
+// NEW (FIXED):
   async checkIfLiked(userId, postId) {
-    const { data, error } = await supabase
-      .from('post_likes')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('post_id', postId)
-      .single()
-    return { data: !!data, error }
+  const { data, error } = await supabase
+    .from('post_likes')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('post_id', postId)
+    .maybeSingle() // Use maybeSingle() instead of single()
+  
+  // If no error and data exists, user has liked
+  return { data: !!data, error: error && error.code !== 'PGRST116' ? error : null }
   },
 
   // ==================== COMMENTS ====================
@@ -346,7 +401,18 @@ export const db = {
     return { error }
   },
 
-  // ==================== FOLLOWS (HYBRID MODEL) ====================
+  async checkIfCommentLiked(userId, commentId) {
+    const { data, error } = await supabase
+      .from('comment_likes')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('comment_id', commentId)
+      .maybeSingle()
+    
+    return { data: !!data, error: error && error.code !== 'PGRST116' ? error : null }
+  },
+
+  // ==================== FOLLOWS ====================
   async followUser(followerId, followingId) {
     const { data, error } = await supabase
       .from('follows')
@@ -397,630 +463,163 @@ export const db = {
     return { data: data?.map(f => f.following), error }
   },
 
-  // ==================== CONNECTION REQUESTS (for investor-to-investor) ====================
+  // ==================== CONNECTION REQUESTS (deprecated, kept for backward compatibility) ====================
   async sendConnectionRequest(fromUserId, toUserId, message = null) {
-    const { data, error } = await supabase
-      .from('connection_requests')
-      .insert({
-        from_user_id: fromUserId,
-        to_user_id: toUserId,
-        message,
-        status: 'pending'
-      })
-      .select()
-      .single()
-    return { data, error }
+    // Just create a follow relationship instead
+    return this.followUser(fromUserId, toUserId)
   },
 
   async acceptConnectionRequest(requestId) {
-    // Update request status
-    const { error: updateError } = await supabase
-      .from('connection_requests')
-      .update({ 
-        status: 'accepted',
-        responded_at: new Date().toISOString()
-      })
-      .eq('id', requestId)
-
-    if (updateError) return { error: updateError }
-
-    // Get request details to create mutual follows
-    const { data: request } = await supabase
-      .from('connection_requests')
-      .select('from_user_id, to_user_id')
-      .eq('id', requestId)
-      .single()
-
-    if (request) {
-      // Create mutual follows
-      await db.followUser(request.from_user_id, request.to_user_id)
-      await db.followUser(request.to_user_id, request.from_user_id)
-    }
-
+    // No-op, kept for compatibility
     return { error: null }
   },
 
   async rejectConnectionRequest(requestId) {
-    const { error } = await supabase
-      .from('connection_requests')
-      .update({ 
-        status: 'rejected',
-        responded_at: new Date().toISOString()
-      })
-      .eq('id', requestId)
-    return { error }
+    // No-op, kept for compatibility
+    return { error: null }
   },
 
   async getConnectionRequests(userId) {
-    const { data, error } = await supabase
-      .from('connection_requests')
-      .select(`
-        *,
-        from_user:profiles!connection_requests_from_user_id_fkey(*)
-      `)
-      .eq('to_user_id', userId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-    return { data, error }
+    // Return empty array, kept for compatibility
+    return { data: [], error: null }
   },
 
   async checkConnectionRequestExists(fromUserId, toUserId) {
+    // Check if following instead
+    return this.checkIfFollowing(fromUserId, toUserId)
+  },
+  // =====================================================
+// ADD THESE FUNCTIONS TO src/lib/supabase.js
+// Add to the 'db' object
+// =====================================================
+
+// ==================== DISCUSSIONS ====================
+  async getDiscussions(limit = 20, offset = 0) {
     const { data, error } = await supabase
-      .from('connection_requests')
-      .select('id, status')
-      .or(`and(from_user_id.eq.${fromUserId},to_user_id.eq.${toUserId}),and(from_user_id.eq.${toUserId},to_user_id.eq.${fromUserId})`)
-      .single()
+      .from('posts')
+      .select(`
+        *,
+        author:profiles(*),
+        likes_count:post_likes(count),
+        comments_count:comments(count)
+      `)
+      .eq('post_type', 'discussion')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
     return { data, error }
   },
 
-  // ==================== ADVISOR VERIFICATION ====================
-  async createAdvisorVerification(verification) {
+  // ==================== DEBATES ====================
+  async getDebates(limit = 20, offset = 0) {
     const { data, error } = await supabase
-      .from('advisor_verifications')
-      .insert(verification)
-      .select()
-      .single()
+      .from('posts')
+      .select(`
+        *,
+        author:profiles(*),
+        votes_for:debate_votes(count).eq(side, 'for'),
+        votes_against:debate_votes(count).eq(side, 'against')
+      `)
+      .eq('post_type', 'debate')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
     return { data, error }
   },
 
-  async getAdvisorVerification(userId) {
-    const { data, error } = await supabase
-      .from('advisor_verifications')
-      .select('*')
+  async voteOnDebate(userId, postId, side) {
+    // Check if user already voted
+    const { data: existingVote } = await supabase
+      .from('debate_votes')
+      .select('id, side')
       .eq('user_id', userId)
-      .single()
-    return { data, error }
-  },
+      .eq('post_id', postId)
+      .maybeSingle()
 
-  async updateAdvisorVerification(verificationId, updates) {
+    // If same side, remove vote
+    if (existingVote && existingVote.side === side) {
+      const { error } = await supabase
+        .from('debate_votes')
+        .delete()
+        .eq('id', existingVote.id)
+      return { data: null, error }
+    }
+
+    // If different side, update vote
+    if (existingVote) {
+      const { data, error } = await supabase
+        .from('debate_votes')
+        .update({ side })
+        .eq('id', existingVote.id)
+        .select()
+        .single()
+      return { data, error }
+    }
+
+    // New vote
     const { data, error } = await supabase
-      .from('advisor_verifications')
-      .update(updates)
-      .eq('id', verificationId)
+      .from('debate_votes')
+      .insert({ user_id: userId, post_id: postId, side })
       .select()
       .single()
     return { data, error }
   },
 
-  // ==================== SMART SIGNALS ====================
-  async createSignal(signal) {
+  async getUserDebateVote(userId, postId) {
     const { data, error } = await supabase
-      .from('signals')
-      .insert({
-        ...signal,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      })
-      .select(`
-        *,
-        advisor:profiles(*)
-      `)
-      .single()
-    return { data, error }
+      .from('debate_votes')
+      .select('side')
+      .eq('user_id', userId)
+      .eq('post_id', postId)
+      .maybeSingle()
+    return { data: data?.side || null, error }
   },
 
-  async getSignals(limit = 20, offset = 0) {
+  // ==================== COMMUNITIES ====================
+  async getCommunities(limit = 50) {
     const { data, error } = await supabase
-      .from('signals')
-      .select(`
-        *,
-        advisor:profiles(*)
-      `)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
-    return { data, error }
-  },
-
-  async getSignalById(signalId) {
-    const { data, error } = await supabase
-      .from('signals')
-      .select(`
-        *,
-        advisor:profiles(*)
-      `)
-      .eq('id', signalId)
-      .single()
-    return { data, error }
-  },
-
-  async getSignalsByAdvisor(advisorId, limit = 20, offset = 0) {
-    const { data, error } = await supabase
-      .from('signals')
-      .select(`
-        *,
-        advisor:profiles(*)
-      `)
-      .eq('advisor_id', advisorId)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1)
-    return { data, error }
-  },
-
-  async updateSignalStatus(signalId, status, additionalData = {}) {
-    const updates = {
-      status,
-      ...additionalData
-    }
-    
-    if (status === 'active' && !additionalData.entry_triggered_at) {
-      updates.entry_triggered_at = new Date().toISOString()
-    }
-    if (status === 'target_hit' && !additionalData.target_hit_at) {
-      updates.target_hit_at = new Date().toISOString()
-      updates.closed_at = new Date().toISOString()
-    }
-    if (status === 'stop_hit' && !additionalData.closed_at) {
-      updates.closed_at = new Date().toISOString()
-    }
-    if (status === 'expired' && !additionalData.closed_at) {
-      updates.closed_at = new Date().toISOString()
-    }
-
-    const { data, error } = await supabase
-      .from('signals')
-      .update(updates)
-      .eq('id', signalId)
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async updateSignalPrice(signalId, currentPrice) {
-    const { data, error } = await supabase
-      .from('signals')
-      .update({ current_price: currentPrice })
-      .eq('id', signalId)
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async deleteSignal(signalId) {
-    const { error } = await supabase
-      .from('signals')
-      .delete()
-      .eq('id', signalId)
-    return { error }
-  },
-
-  // ==================== ADVISOR STATS ====================
-  async getAdvisorStats(advisorId) {
-    const { data, error } = await supabase
-      .from('advisor_stats')
+      .from('communities')
       .select('*')
-      .eq('advisor_id', advisorId)
-      .single()
-    return { data, error }
-  },
-
-  // ==================== ADVISOR TOOLS - PHASE 1 ====================
-  
-  // ===== CLIENT MANAGEMENT =====
-  async getAdvisorClients(advisorId) {
-    const { data, error } = await supabase
-      .from('advisor_clients')
-      .select(`
-        *,
-        client:profiles!advisor_clients_client_id_fkey(*)
-      `)
-      .eq('advisor_id', advisorId)
-      .order('priority', { ascending: false })
-      .order('last_reviewed_at', { ascending: true, nullsFirst: true })
-    
-    if (error) return { data, error }
-    
-    // Manually fetch health scores for each client
-    const clientsWithHealth = await Promise.all(
-      data.map(async (client) => {
-        const { data: healthData } = await supabase
-          .from('client_health_scores')
-          .select('*')
-          .eq('advisor_id', advisorId)
-          .eq('client_id', client.client_id)
-          .maybeSingle()
-        
-        return {
-          ...client,
-          health: healthData ? [healthData] : []
-        }
-      })
-    )
-    
-    return { data: clientsWithHealth, error: null }
-  },
-
-  async addAdvisorClient(advisorId, clientId, metadata = {}) {
-    const { data, error } = await supabase
-      .from('advisor_clients')
-      .insert({
-        advisor_id: advisorId,
-        client_id: clientId,
-        ...metadata
-      })
-      .select(`
-        *,
-        client:profiles!advisor_clients_client_id_fkey(*)
-      `)
-      .single()
-    return { data, error }
-  },
-
-  async updateAdvisorClient(advisorId, clientId, updates) {
-    const { data, error } = await supabase
-      .from('advisor_clients')
-      .update(updates)
-      .eq('advisor_id', advisorId)
-      .eq('client_id', clientId)
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async markClientReviewed(advisorId, clientId) {
-    return this.updateAdvisorClient(advisorId, clientId, {
-      last_reviewed_at: new Date().toISOString()
-    })
-  },
-
-  // ===== CLIENT HEALTH SCORES =====
-  async getClientHealthScore(advisorId, clientId) {
-    const { data, error } = await supabase
-      .from('client_health_scores')
-      .select('*')
-      .eq('advisor_id', advisorId)
-      .eq('client_id', clientId)
-      .single()
-    return { data, error }
-  },
-
-  async getClientsNeedingAttention(advisorId, limit = 10) {
-    const { data, error } = await supabase
-      .from('client_health_scores')
-      .select(`
-        *,
-        client:profiles!client_health_scores_client_id_fkey(*)
-      `)
-      .eq('advisor_id', advisorId)
-      .or('needs_rebalancing.eq.true,needs_contact.eq.true,has_concentration_risk.eq.true')
-      .order('overall_health', { ascending: true })
+      .eq('is_public', true)
+      .order('member_count', { ascending: false })
       .limit(limit)
     return { data, error }
   },
 
-  async calculateClientHealth(advisorId, clientId) {
+  async joinCommunity(userId, communityId) {
     const { data, error } = await supabase
-      .rpc('calculate_client_health', {
-        p_advisor_id: advisorId,
-        p_client_id: clientId
-      })
-    return { data, error }
-  },
-
-  async recalculateAllClientHealth(advisorId) {
-    // Get all clients
-    const { data: clients, error: clientsError } = await this.getAdvisorClients(advisorId)
-    if (clientsError) return { error: clientsError }
-
-    // Calculate health for each
-    const promises = clients.map(c => this.calculateClientHealth(advisorId, c.client_id))
-    await Promise.all(promises)
-
-    return { data: clients.length, error: null }
-  },
-
-  // ===== ACTION ITEMS =====
-  async getActionItems(advisorId, filters = {}) {
-    let query = supabase
-      .from('action_items')
-      .select(`
-        *,
-        client:profiles(*)
-      `)
-      .eq('advisor_id', advisorId)
-
-    if (filters.status) {
-      query = query.eq('status', filters.status)
-    } else {
-      query = query.in('status', ['pending', 'in_progress'])
-    }
-
-    if (filters.client_id) {
-      query = query.eq('client_id', filters.client_id)
-    }
-
-    if (filters.priority) {
-      query = query.eq('priority', filters.priority)
-    }
-
-    query = query.order('priority', { ascending: false })
-    query = query.order('due_date', { ascending: true, nullsFirst: false })
-    query = query.order('created_at', { ascending: true })
-
-    const { data, error } = await query
-    return { data, error }
-  },
-
-  async getActionItemsByPriority(advisorId) {
-    const { data, error } = await this.getActionItems(advisorId)
-    if (error) return { data: null, error }
-
-    return {
-      data: {
-        urgent: data.filter(item => item.priority === 3),
-        high: data.filter(item => item.priority === 2),
-        medium: data.filter(item => item.priority === 1),
-        low: data.filter(item => item.priority === 0)
-      },
-      error: null
-    }
-  },
-
-  async createActionItem(advisorId, item) {
-    const { data, error } = await supabase
-      .from('action_items')
-      .insert({
-        advisor_id: advisorId,
-        ...item,
-        status: 'pending'
-      })
-      .select(`
-        *,
-        client:profiles(*)
-      `)
-      .single()
-    return { data, error }
-  },
-
-  async updateActionItem(itemId, updates) {
-    const { data, error } = await supabase
-      .from('action_items')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', itemId)
+      .from('community_members')
+      .insert({ user_id: userId, community_id: communityId })
       .select()
       .single()
     return { data, error }
   },
 
-  async completeActionItem(itemId) {
-    return this.updateActionItem(itemId, {
-      status: 'completed',
-      completed_at: new Date().toISOString()
-    })
-  },
-
-  async snoozeActionItem(itemId, snoozeDays = 1) {
-    const snoozeUntil = new Date()
-    snoozeUntil.setDate(snoozeUntil.getDate() + snoozeDays)
-
-    return this.updateActionItem(itemId, {
-      status: 'snoozed',
-      snoozed_until: snoozeUntil.toISOString()
-    })
-  },
-
-  async deleteActionItem(itemId) {
+  async leaveCommunity(userId, communityId) {
     const { error } = await supabase
-      .from('action_items')
+      .from('community_members')
       .delete()
-      .eq('id', itemId)
+      .eq('user_id', userId)
+      .eq('community_id', communityId)
     return { error }
   },
 
-  async generateActionItemsForClient(advisorId, clientId) {
+  async checkIfJoinedCommunity(userId, communityId) {
     const { data, error } = await supabase
-      .rpc('generate_action_items_for_client', {
-        p_advisor_id: advisorId,
-        p_client_id: clientId
-      })
-    return { data, error }
+      .from('community_members')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('community_id', communityId)
+      .maybeSingle()
+    return { data: !!data, error: error && error.code !== 'PGRST116' ? error : null }
   },
 
-  // ===== QUICK NOTES =====
-  async getClientQuickNotes(advisorId, clientId) {
+  async getUserCommunities(userId) {
     const { data, error } = await supabase
-      .from('client_quick_notes')
-      .select('*')
-      .eq('advisor_id', advisorId)
-      .eq('client_id', clientId)
-      .order('created_at', { ascending: false })
-    return { data, error }
-  },
-
-  async createQuickNote(advisorId, clientId, content, tags = []) {
-    const { data, error } = await supabase
-      .from('client_quick_notes')
-      .insert({
-        advisor_id: advisorId,
-        client_id: clientId,
-        content,
-        tags
-      })
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async updateQuickNote(noteId, updates) {
-    const { data, error } = await supabase
-      .from('client_quick_notes')
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', noteId)
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async deleteQuickNote(noteId) {
-    const { error } = await supabase
-      .from('client_quick_notes')
-      .delete()
-      .eq('id', noteId)
-    return { error }
-  },
-
-  async searchQuickNotes(advisorId, searchTerm) {
-    const { data, error } = await supabase
-      .from('client_quick_notes')
+      .from('community_members')
       .select(`
-        *,
-        client:profiles!client_quick_notes_client_id_fkey(*)
+        community:communities(*)
       `)
-      .eq('advisor_id', advisorId)
-      .or(`content.ilike.%${searchTerm}%,tags.cs.{${searchTerm}}`)
-      .order('created_at', { ascending: false })
-      .limit(50)
-    return { data, error }
-  },
-
-  // ===== CLIENT PREFERENCES =====
-  async getClientPreferences(advisorId, clientId) {
-    const { data, error } = await supabase
-      .from('client_preferences')
-      .select('*')
-      .eq('advisor_id', advisorId)
-      .eq('client_id', clientId)
-      .single()
-    return { data, error }
-  },
-
-  async updateClientPreferences(advisorId, clientId, preferences) {
-    const { data, error } = await supabase
-      .from('client_preferences')
-      .upsert({
-        advisor_id: advisorId,
-        client_id: clientId,
-        ...preferences,
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  // ===== CLIENT CONTEXT SUMMARY =====
-  async getClientContextSummary(advisorId, clientId) {
-    const { data, error } = await supabase
-      .from('client_context_summary')
-      .select('*')
-      .eq('advisor_id', advisorId)
-      .eq('client_id', clientId)
-      .single()
-    return { data, error }
-  },
-
-  async updateClientContextSummary(advisorId, clientId, summary, keyPoints = []) {
-    const { data, error } = await supabase
-      .from('client_context_summary')
-      .upsert({
-        advisor_id: advisorId,
-        client_id: clientId,
-        summary,
-        key_points: keyPoints,
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-    return { data, error }
-  },
-
-  async calculateAdvisorStats(advisorId) {
-    // Get all closed signals for the advisor
-    const { data: signals, error } = await supabase
-      .from('signals')
-      .select('*')
-      .eq('advisor_id', advisorId)
-      .in('status', ['target_hit', 'stop_hit', 'expired'])
-      .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()) // Last 90 days
-    
-    if (error) return { data: null, error }
-
-    const totalSignals = signals.length
-    const wins = signals.filter(s => s.status === 'target_hit').length
-    const losses = signals.filter(s => s.status === 'stop_hit').length
-    
-    const accuracy = totalSignals > 0 ? (wins / totalSignals) * 100 : 0
-    
-    // Calculate average returns
-    const returns = signals
-      .filter(s => s.status === 'target_hit' || s.status === 'stop_hit')
-      .map(s => {
-        if (s.status === 'target_hit') {
-          const entryAvg = (parseFloat(s.entry_min) + parseFloat(s.entry_max)) / 2
-          const targetPrice = s.targets && s.targets.length > 0 ? parseFloat(s.targets[0]) : entryAvg
-          return ((targetPrice - entryAvg) / entryAvg) * 100
-        } else {
-          const entryAvg = (parseFloat(s.entry_min) + parseFloat(s.entry_max)) / 2
-          const stopLoss = parseFloat(s.stop_loss)
-          return ((stopLoss - entryAvg) / entryAvg) * 100
-        }
-      })
-    
-    const avgReturn = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0
-    const bestReturn = returns.length > 0 ? Math.max(...returns) : 0
-    const maxDrawdown = returns.length > 0 ? Math.min(...returns) : 0
-
-    // Calculate average hold time
-    const holdTimes = signals
-      .filter(s => s.entry_triggered_at && s.closed_at)
-      .map(s => new Date(s.closed_at) - new Date(s.entry_triggered_at))
-    
-    const avgHoldTime = holdTimes.length > 0 
-      ? holdTimes.reduce((a, b) => a + b, 0) / holdTimes.length 
-      : 0
-
-    // Determine risk profile
-    let riskProfile = 'MODERATE'
-    if (avgReturn > 15) riskProfile = 'AGGRESSIVE'
-    else if (avgReturn < 5) riskProfile = 'CONSERVATIVE'
-
-    // Update or insert stats
-    const stats = {
-      advisor_id: advisorId,
-      accuracy_90d: accuracy,
-      avg_return_90d: avgReturn,
-      total_signals: totalSignals,
-      wins,
-      losses,
-      best_return: bestReturn,
-      max_drawdown: maxDrawdown,
-      avg_hold_time: avgHoldTime,
-      risk_profile: riskProfile,
-      last_calculated: new Date().toISOString()
-    }
-
-    const { data, error: updateError } = await supabase
-      .from('advisor_stats')
-      .upsert(stats)
-      .select()
-      .single()
-    
-    return { data, error: updateError }
+      .eq('user_id', userId)
+    return { data: data?.map(m => m.community), error }
   }
 }
 

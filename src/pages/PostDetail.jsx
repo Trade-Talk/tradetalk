@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Send, Loader, Trash2 } from 'lucide-react'
+import { ArrowLeft, Send, Loader } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { db } from '../lib/supabase'
 import toast from 'react-hot-toast'
+import CommentCard from '../components/posts/CommentCard'
 
 export default function PostDetail() {
   const { postId } = useParams()
@@ -199,40 +200,11 @@ export default function PostDetail() {
             </div>
           ) : (
             comments.map((comment) => (
-              <div key={comment.id} className="p-4">
-                <div className="flex items-start gap-2.5">
-                  <div className="w-8 h-8 bg-gradient-to-br from-gray-800 to-black rounded-full flex items-center justify-center text-white font-light flex-shrink-0 border border-gray-900">
-                    {comment.author?.avatar_url ? (
-                      <img src={comment.author.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
-                    ) : (
-                      <span className="text-xs">{comment.author?.full_name?.[0] || 'U'}</span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <p className="font-light text-white text-sm truncate">
-                          {comment.author?.full_name || 'Unknown'}
-                        </p>
-                        <span className="text-xs text-gray-600 flex-shrink-0">
-                          · {formatDate(comment.created_at)}
-                        </span>
-                      </div>
-                      {user?.id === comment.author_id && (
-                        <button
-                          onClick={() => handleDeleteComment(comment.id)}
-                          className="p-1 hover:bg-gray-950 rounded text-gray-600 hover:text-red-500 touch-manipulation"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-white text-sm mt-1 break-words font-light leading-snug">
-                      {comment.content}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <CommentCard 
+                key={comment.id} 
+                comment={comment} 
+                onDelete={handleDeleteComment}
+              />
             ))
           )}
         </div>
