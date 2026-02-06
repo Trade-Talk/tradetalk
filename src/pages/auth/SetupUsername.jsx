@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader } from 'lucide-react'
 import { supabase } from '../../lib/supabase-mvp'
+import { useAuth } from '../../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
 export default function SetupUsername() {
   const navigate = useNavigate()
+  const { loadUserProfile } = useAuth()
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(false)
@@ -172,12 +174,13 @@ export default function SetupUsername() {
 
       console.log('Username updated successfully:', data)
 
+      // Reload the user profile in AuthContext to pick up the new username
+      await loadUserProfile(session.user.id)
+      
       toast.success('Welcome to TradeTalk! 🎉')
       
-      // Small delay before navigation to ensure toast is visible
-      setTimeout(() => {
-        navigate('/', { replace: true })
-      }, 500)
+      // Navigate to home - the profile is now updated in context
+      navigate('/', { replace: true })
       
     } catch (err) {
       console.error('Error setting username:', err)

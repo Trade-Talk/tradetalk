@@ -55,6 +55,12 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/auth/welcome" replace />
   }
   
+  // Wait for profile to load before checking username
+  // This prevents race conditions when profile is still loading
+  if (user && !profile) {
+    return <PageLoader />
+  }
+  
   // If user is logged in but hasn't set a username yet, redirect to setup
   if (user && profile && !profile.username) {
     return <Navigate to="/auth/setup-username" replace />
